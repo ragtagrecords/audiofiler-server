@@ -13,7 +13,7 @@ $ node app.js
 ```
 Or, to persist in background after terminal is closed
 ```
-node app.js > stdout.txt 2> stderr.txt &
+forever start 
 ```
 ## Local Host
 ```
