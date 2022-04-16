@@ -8,7 +8,13 @@ router.get('/', function (req, res) {
   res.send('public root');
 })
   
-// About page route.
+// TODO: make this return a list of all the audio filenames in the folder
+router.get('/audio', function (req, res) {
+  res.send('audio folder');
+})
+
+
+// get audio file by name
 router.get('/audio/:fileName', function (req, res) {
 
   var options = {
@@ -27,6 +33,12 @@ router.get('/audio/:fileName', function (req, res) {
   });
 })
 
+// TODO: make this return a list of all the image filenames in the folder
+router.get('/iamge', function (req, res) {
+  res.send('image folder');
+})
+
+// get image file by name
 router.get('/images/:fileName', function (req, res) {
 
   var options = {
