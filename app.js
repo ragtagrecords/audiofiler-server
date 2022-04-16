@@ -3,6 +3,7 @@
 var http = require('http');
 var express = require('express');
 
+//var path = require('path');
 var PORT = 3000;
 var app = express();
 var public = require('./public.js');
@@ -22,9 +23,21 @@ router.get('/', function(req, res){
     var fileName = 'sample1.mp3';
     res.sendFile(fileName, options, function (err) {
         if (err) {
+            console.log("req: ");
+            console.log(req);
+            console.log("path: ");
+            console.log(path);
+            console.log("dirname: ");
+            console.log(__dirname);
             next(err);
         } else {
             console.log('Sent:', fileName);
+            console.log("req: ");
+            console.log(req);
+            console.log("path: ");
+            console.log(path);
+            console.log("dirname: ");
+            console.log(__dirname);
         }
     });
 });
@@ -38,9 +51,21 @@ router.get('/public/audio/:fileName', function(req, res){
     var fileName = req.params.fileName;
     res.sendFile(fileName, options, function (err) {
         if (err) {
+            console.log("req params: ");
+            console.log(req.params);
+            console.log("path: ");
+            console.log(path);
+            console.log("dirname: ");
+            console.log(__dirname);
             next(err);
         } else {
             console.log('Sent:', fileName);
+            console.log("req params: ");
+            console.log(req.params);
+            console.log("path: ");
+            console.log(path);
+            console.log("dirname: ");
+            console.log(__dirname);
         }
     });
 });
