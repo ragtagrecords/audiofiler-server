@@ -2,15 +2,22 @@
 
 var http = require('http');
 var express = require('express');
-var app = express();
-var path = require('path');
-var PORT = 3000;
 
+var PORT = 3000;
+var app = express();
+var public = require('./public.js');
+app.use('/public', public);
+
+
+
+
+/*
 // Without middleware
-app.get('/', function(req, res){
+router.get('/', function(req, res){
     var options = {
         root: path.join(__dirname)
     };
+    
      
     var fileName = 'sample1.mp3';
     res.sendFile(fileName, options, function (err) {
@@ -21,6 +28,23 @@ app.get('/', function(req, res){
         }
     });
 });
+
+router.get('/public/audio/:fileName', function(req, res){
+    var options = {
+        root: path.join(__dirname)
+    };
+    console.log(options.root);
+     
+    var fileName = req.params.fileName;
+    res.sendFile(fileName, options, function (err) {
+        if (err) {
+            next(err);
+        } else {
+            console.log('Sent:', fileName);
+        }
+    });
+});
+*/
 
 app.listen(PORT, function(err){
     if (err) console.log(err);
