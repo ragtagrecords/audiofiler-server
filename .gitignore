@@ -373,3 +373,7 @@ yarn-error.log*
 
 # public static files
 /public
+
+# server logs
+stderr.txt
+stdout.txt
