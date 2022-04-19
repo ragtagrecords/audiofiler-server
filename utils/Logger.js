@@ -1,13 +1,13 @@
-function logError(fileName, error, message) {
-    if (message) {
+function logError(fileName, message) {
+    if (fileName && message) {
         console.log("ERROR: " + fileName + " | " + message);
+    } else {
+        console.log("ERROR: undefined issue in Logger.js");
     }
-    console.log(error);
 }
 
-function logDatabase(fileName, table, result) {
-    console.log(fileName + "(" + table + "):");
-    console.log(result);
+function logDatabaseSuccess(fileName, table, message) {
+    console.log(fileName + "(" + table + "): " + message);
 }
 
 function logFileServer(fileName, message) {
@@ -20,4 +20,4 @@ function logAPI(fileName, type, username, message) {
 }
 */
 
-module.exports = { logError, logDatabase, logFileServer };
+module.exports = { logError, logDatabaseSuccess, logFileServer };
