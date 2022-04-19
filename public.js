@@ -30,13 +30,19 @@ router.get('/images/:fileName', function (req, res) {
 
 // add a new audio
 router.post('/audio', function (req, res) {
-  AudioDatabaseLibrary.addAudioToDatabase(
+  //  TODO: add to database with transaction, and rollback if file server fails
+  const result = AudioDatabaseLibrary.addAudioToDatabase(
     req.params.name ?? 'TEST', 
     req.params.tempo ?? null,
     '.mp3'
   );
-  // TODO::
-  // FileServerLibrary.addAudioToFileServer
+
+  if (!result) {
+    res.status(404).send({ message: "Failed to upload file"});
+    return null;
+  }
+
+  FileServerLibrary.postFile(req, res, '/audio');
 })
 
 // necessary with express.Router()

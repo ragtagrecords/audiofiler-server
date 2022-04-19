@@ -6,7 +6,8 @@ function logError(fileName, error, message) {
 }
 
 function logDatabase(fileName, table, result) {
-    console.log(fileName + "(" + table + "): " + result);
+    console.log(fileName + "(" + table + "):");
+    console.log(result);
 }
 
 function logFileServer(fileName, message) {
