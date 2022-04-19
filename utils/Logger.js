@@ -1,7 +1,3 @@
-function logAPI(fileName, type, username, message) {
-    console.log(fileName + "(" + type + "): " + username + " | " + message);
-}
-
 function logError(fileName, error, message) {
     if (message) {
         console.log("ERROR: " + fileName + " | " + message);
@@ -17,4 +13,10 @@ function logFileServer(fileName, message) {
     console.log(fileName + ": " + message);
 }
 
-module.exports = { logAPI, logError, logDatabase, logFileServer };
+/*
+function logAPI(fileName, type, username, message) {
+    console.log(fileName + "(" + type + "): " + username + " | " + message);
+}
+*/
+
+module.exports = { logError, logDatabase, logFileServer };
