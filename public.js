@@ -43,19 +43,22 @@ router.post('/audio', async (req, res) => {
 
   let doesNameIncludeExtension = knownExtensions.some(extension => audioName === extension);
 
-  const result = await AudioDatabaseLibrary.addAudioToDatabase(
+  const databaseResult = await AudioDatabaseLibrary.addAudioToDatabase(
     audioName, 
     req.params.tempo ?? null,
     doesNameIncludeExtension ? '.mp3' : ''
   );
 
-  // TODO: find a way to check if database was successful, currently not correctly async
-  if (!result) {
+  if (!databaseResult) {
     res.status(404).send({ message: "Failed to add row to database"});
     return false;
   }
 
-  FileServerLibrary.postFile(req, res, '/audio');
+  const fileServerResult = await FileServerLibrary.postFile(req, res, '/audio');
+
+  if(!fileServerResult) {
+    // TODO: rollback
+  }
 })
 
 // **** TEST *****
