@@ -7,9 +7,6 @@ const AudioDatabaseLibrary = require('./lib/AudioDatabaseLibrary.js');
 const FileServerLibrary = require('./lib/FileServerLibrary.js');
 const Logger = require('./utils/Logger.js');
 
-const CURR_FILE = 'Public.js'
-
-
 // ***** GET *****
 
 router.get('/audio', function (req, res) {
@@ -37,7 +34,7 @@ router.post('/audio', function (req, res) {
   //  TODO: add to database with transaction, and rollback if file server fails
   if (!req.params.name && !req.files.file.name) {
     res.status(404).send({ message: "No file name received"});
-    return null;
+    return false;
   }
 
   // prefer the name in request over actual file name
@@ -56,11 +53,24 @@ router.post('/audio', function (req, res) {
   /*
   if (!result) {
     res.status(404).send({ message: "Failed to add row to database"});
-    return null;
+    return false;
   }
   */
 
   FileServerLibrary.postFile(req, res, '/audio');
+})
+
+// **** TEST *****
+router.get('/test', function (req, res) {
+  fs.access('/mnt/public-ext4/main/file.txt', fs.constants.W_OK, (err) => {
+    if (err) {
+      console.log("File cannot be written to");
+      res.status(404).send('Failure');
+    } else {
+      console.log("File can be written to");
+      res.status(200).send('Success');
+    }
+  });
 })
 
 // necessary with express.Router()
