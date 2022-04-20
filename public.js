@@ -15,21 +15,28 @@ router.get('/songs', async function (req, res) {
   if(songs) {
     res.status(200).send(songs);
     return true;
+  } else {
+    res.status(404).send({ message: "Couldn't get songs"});
+    return false;
   }
-  //FileServerLibrary.getDirectory(req, res, '/songs');
 })
-
+/*
+// TODO: make this work like /songs, it should return a JSON object of images
 router.get('/images', function (req, res) {
-  FileServerLibrary.getDirectory(req, res, '/images');
+  const images = await SongDatabaseLibrary.getAllImages();
+
+  if(images) {
+    res.status(200).send(images);
+    return true;
+  }
+})
+*/
+router.get('/images/:fileName', async function (req, res) {
+  const song = await FileServerLibrary.getFile(req, res, '/images');
 })
 
-
-router.get('/songs/:fileName', function (req, res) {
-  FileServerLibrary.getFile(req, res, '/songs');
-})
-
-router.get('/images/:fileName', function (req, res) {
-  FileServerLibrary.getFile(req, res, '/images');
+router.get('/songs/:fileName', async function (req, res) {
+  const song = await FileServerLibrary.getFile(req, res, '/songs');
 })
 
 
@@ -57,7 +64,6 @@ router.post('/songs', async (req, res) => {
     req.params.tempo ?? null,
   );
 
-
   //  TODO: add to database with transaction, and rollback if file server fails
   if (!databaseResult) {
     res.status(404).send({ message: "Failed to add row to database"});
@@ -66,12 +72,12 @@ router.post('/songs', async (req, res) => {
 
   const fileServerResult = await FileServerLibrary.postFile(req, res, '/songs');
 
-  if(!fileServerResult) {
-    // TODO: rollback
+  if (fileServerResult) {
+    // TODO: commit
+    res.status(200).send({ message: "File uploaded"});
   } else {
-    // res.status(200).send({ message: "Song added successfully"});
-
-    console.log("file added to server!!!");
+    // TODO: rollback
+    res.status(500).send({ message: "File not uploaded"});
   }
 })
 
