@@ -30,32 +30,30 @@ router.get('/images/:fileName', function (req, res) {
 // ***** POST *****
 
 // add a new audio
-router.post('/audio', function (req, res) {
+router.post('/audio', async (req, res) => {
+  const audioName = req.body.fileName ?? req.files.file.name ?? null;
   //  TODO: add to database with transaction, and rollback if file server fails
-  if (!req.params.name && !req.files.file.name) {
+  if (!audioName) {
     res.status(404).send({ message: "No file name received"});
     return false;
   }
 
   // prefer the name in request over actual file name
-  const audioName = req.params.name ?? req.files.file.name;
   const knownExtensions = ['.mp3', '.wav', '.ogg', '.flac'];
 
   let doesNameIncludeExtension = knownExtensions.some(extension => audioName === extension);
 
-  const result = AudioDatabaseLibrary.addAudioToDatabase(
+  const result = await AudioDatabaseLibrary.addAudioToDatabase(
     audioName, 
     req.params.tempo ?? null,
     doesNameIncludeExtension ? '.mp3' : ''
   );
 
   // TODO: find a way to check if database was successful, currently not correctly async
-  /*
   if (!result) {
     res.status(404).send({ message: "Failed to add row to database"});
     return false;
   }
-  */
 
   FileServerLibrary.postFile(req, res, '/audio');
 })

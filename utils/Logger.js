@@ -3,7 +3,7 @@ function logError(functionName, message) {
 }
 
 function logSuccess(functionName, message) {
-    console.log(functionName + ": " + message);
+    console.log('SUCCESS: ' + functionName + " | " + message);
 }
 
 /*
