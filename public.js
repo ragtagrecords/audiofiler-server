@@ -3,14 +3,20 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 
-const AudioDatabaseLibrary = require('./lib/AudioDatabaseLibrary.js');
+const SongDatabaseLibrary = require('./lib/SongDatabaseLibrary.js');
 const FileServerLibrary = require('./lib/FileServerLibrary.js');
 const Logger = require('./utils/Logger.js');
 
 // ***** GET *****
 
-router.get('/audio', function (req, res) {
-  FileServerLibrary.getDirectory(req, res, '/audio');
+router.get('/songs', async function (req, res) {
+  const songs = await SongDatabaseLibrary.getAllSongs();
+
+  if(songs) {
+    res.status(200).send(songs);
+    return true;
+  }
+  //FileServerLibrary.getDirectory(req, res, '/songs');
 })
 
 router.get('/images', function (req, res) {
@@ -18,8 +24,8 @@ router.get('/images', function (req, res) {
 })
 
 
-router.get('/audio/:fileName', function (req, res) {
-  FileServerLibrary.getFile(req, res, '/audio');
+router.get('/songs/:fileName', function (req, res) {
+  FileServerLibrary.getFile(req, res, '/songs');
 })
 
 router.get('/images/:fileName', function (req, res) {
@@ -29,35 +35,43 @@ router.get('/images/:fileName', function (req, res) {
 
 // ***** POST *****
 
-// add a new audio
-router.post('/audio', async (req, res) => {
-  const audioName = req.body.fileName ?? req.files.file.name ?? null;
-  //  TODO: add to database with transaction, and rollback if file server fails
-  if (!audioName) {
+// add a new song
+router.post('/songs', async (req, res) => {
+  const fileName = req.files.file.name;
+
+  if (!fileName) {
     res.status(404).send({ message: "No file name received"});
     return false;
   }
 
-  // prefer the name in request over actual file name
-  const knownExtensions = ['.mp3', '.wav', '.ogg', '.flac'];
+  const songName = req.body.fileName ?? req.files.file.name
 
-  let doesNameIncludeExtension = knownExtensions.some(extension => audioName === extension);
+  if (!songName) {
+    res.status(404).send({ message: "No file name received"});
+    return false;
+  }
 
-  const databaseResult = await AudioDatabaseLibrary.addAudioToDatabase(
-    audioName, 
+  const databaseResult = await SongDatabaseLibrary.addSong(
+    '/' + fileName,
+    songName, 
     req.params.tempo ?? null,
-    doesNameIncludeExtension ? '.mp3' : ''
   );
 
+
+  //  TODO: add to database with transaction, and rollback if file server fails
   if (!databaseResult) {
     res.status(404).send({ message: "Failed to add row to database"});
     return false;
   }
 
-  const fileServerResult = await FileServerLibrary.postFile(req, res, '/audio');
+  const fileServerResult = await FileServerLibrary.postFile(req, res, '/songs');
 
   if(!fileServerResult) {
     // TODO: rollback
+  } else {
+    // res.status(200).send({ message: "Song added successfully"});
+
+    console.log("file added to server!!!");
   }
 })
 
