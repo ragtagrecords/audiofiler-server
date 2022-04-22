@@ -80,43 +80,48 @@ router.get('/playlists/:playlistID', async function (req, res) {
 
 // ***** POST *****
 
-// add a new song
+// add new songs
 router.post('/songs', async (req, res) => {
-  const fileName = req.files.file.name;
 
-  if (!fileName) {
-    res.status(404).send({ message: "No file name received"});
-    return false;
+  const files = Object.values(req.files);
+  let errorEncountered = false;
+  for (let i = 0; i < files.length; i++) {
+    let file = files[i];
+    let fileName = file.name;
+
+    if (!fileName) {
+
+      errorEncountered = true;
+      continue;
+    }
+
+    let databaseResult = await SongDatabaseLibrary.addSong(
+      '/' + fileName,
+      fileName, // TODO: should be a custom name, we dont have ui for entering them all
+      req.params.tempo ?? null,
+    );
+
+    //  TODO: add to database with transaction, and rollback if file server fails
+    if (!databaseResult) {
+      errorEncountered = true;
+      continue;
+    }
+
+    let fileServerResult = await FileServerLibrary.postFile(file, '/songs');
+    
+    if(fileServerResult) {
+      errorEncountered = true;
+      continue;
+    }
   }
-
-  const songName = req.body.fileName ?? req.files.file.name
-
-  if (!songName) {
-    res.status(404).send({ message: "No file name received"});
-    return false;
-  }
-
-  const databaseResult = await SongDatabaseLibrary.addSong(
-    '/' + fileName,
-    songName, 
-    req.params.tempo ?? null,
-  );
-
-  //  TODO: add to database with transaction, and rollback if file server fails
-  if (!databaseResult) {
-    res.status(404).send({ message: "Failed to add row to database"});
-    return false;
-  }
-
-  const fileServerResult = await FileServerLibrary.postFile(req, res, '/songs');
-
-  if (fileServerResult) {
+  if (errorEncountered) {
     // TODO: commit
-    res.status(200).send({ message: "File uploaded"});
+    res.status(500).send({ message: "Some or all of the files were not uploaded"});
   } else {
     // TODO: rollback
-    res.status(500).send({ message: "File not uploaded"});
+    res.status(200).send({ message: "Files uploaded"});
   }
+  
 })
 
 // **** TEST *****
