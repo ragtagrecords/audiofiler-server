@@ -3,138 +3,169 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 
+const DatabaseLibrary = require('./lib/DatabaseLibrary.js');
 const SongDatabaseLibrary = require('./lib/SongDatabaseLibrary.js');
 const FileServerLibrary = require('./lib/FileServerLibrary.js');
 const Logger = require('./utils/Logger.js');
 
-// ***** GET *****
-
 router.get('/songs', async function (req, res) {
-  const songs = await SongDatabaseLibrary.getAllSongs();
-
-  if(songs) {
-    res.status(200).send(songs);
-    return true;
-  } else {
-    res.status(404).send({ message: "Couldn't get songs"});
-    return false;
-  }
+    const songs = await SongDatabaseLibrary.getAllSongs();
+    
+    if(songs) {
+        res.status(200).send(songs);
+        return true;
+    } else {
+        res.status(404).send({ message: "Couldn't get songs"});
+        return false;
+    }
 })
-/*
-// TODO: make this work like /songs, it should return a JSON object of images
-router.get('/images', function (req, res) {
-  const images = await SongDatabaseLibrary.getAllImages();
 
-  if(images) {
-    res.status(200).send(images);
-    return true;
-  }
-})
-*/
 router.get('/images/:fileName', async function (req, res) {
-  const song = await FileServerLibrary.getFile(req, res, '/images');
+    const song = await FileServerLibrary.getFile(req, res, '/images');
 })
 
 router.get('/songs/:fileName', async function (req, res) {
-  const song = await FileServerLibrary.getFile(req, res, '/songs');
+    const song = await FileServerLibrary.getFile(req, res, '/songs');
 })
 
 router.get('/playlists', async function (req, res) {
-  const playlists = await SongDatabaseLibrary.getAllPlaylists();
-  if(1) {
-    res.status(200).send(playlists);
-    return true;
-  } else {
-    res.status(404).send({ message: "Couldn't get songs"});
-    return false;
-  }
-
+    const playlists = await SongDatabaseLibrary.getAllPlaylists();
+    if(1) {
+        res.status(200).send(playlists);
+        return true;
+    } else {
+        res.status(404).send({ message: "Couldn't get songs"});
+        return false;
+    }
+    
 })
 
 // TODO: needs tested
 router.post('/playlists', async function (req, res) {
-  const playlists = await SongDatabaseLibrary.addPlaylist(req.params.name);
-  if(1) {
-    res.status(200).send(playlists);
-    return true;
-  } else {
-    res.status(404).send({ message: "Couldn't get songs"});
-    return false;
-  }
+    const playlists = await SongDatabaseLibrary.addPlaylist(req.params.name);
+    if(1) {
+        res.status(200).send(playlists);
+        return true;
+    } else {
+        res.status(404).send({ message: "Couldn't get songs"});
+        return false;
+    }
 })
 
 
 
 
 router.get('/playlists/:playlistID', async function (req, res) {
-  const songs = await SongDatabaseLibrary.getSongsByPlaylistID(req.params.playlistID);
-  if(songs) {
-    res.status(200).send(songs);
-    return true;
-  } else {
-    res.status(404).send({ message: "Couldn't get songs"});
-    return false;
-  }
+    const songs = await SongDatabaseLibrary.getSongsByPlaylistID(req.params.playlistID);
+    if(songs) {
+        res.status(200).send(songs);
+        return true;
+    } else {
+        res.status(404).send({ message: "Couldn't get songs"});
+        return false;
+    }
 })
 
 
 // ***** POST *****
 
-// add new songs
+/* Add songs to file server and database
+* Optionally add them to playlists as well if ID's are provided
+*
+*/
 router.post('/songs', async (req, res) => {
-
-  const files = Object.values(req.files);
-  let errorEncountered = false;
-  for (let i = 0; i < files.length; i++) {
-    let file = files[i];
-    let fileName = file.name;
-
-    if (!fileName) {
-
-      errorEncountered = true;
-      continue;
-    }
-
-    let databaseResult = await SongDatabaseLibrary.addSong(
-      '/' + fileName,
-      fileName, // TODO: should be a custom name, we dont have ui for entering them all
-      req.params.tempo ?? null,
-    );
-
-    //  TODO: add to database with transaction, and rollback if file server fails
-    if (!databaseResult) {
-      errorEncountered = true;
-      continue;
-    }
-
-    let fileServerResult = await FileServerLibrary.postFile(file, '/songs');
     
-    if(fileServerResult) {
-      errorEncountered = true;
-      continue;
+    const files = Object.values(req.files);
+    const songs = await JSON.parse(req.body.songs);
+    let errorEncountered = false;
+    
+    if (!files || !songs || (files.length !== songs.length)) {
+        res.status(500).send({ message: "Data not formatted properly"});
     }
-  }
-  if (errorEncountered) {
-    // TODO: commit
-    res.status(500).send({ message: "Some or all of the files were not uploaded"});
-  } else {
-    // TODO: rollback
-    res.status(200).send({ message: "Files uploaded"});
-  }
-  
-})
 
+    let successes = [];
+    let failures = [];
+    const db = await DatabaseLibrary.connectToDB();
+    
+    for (let i = 0; i < files.length; i++) {
+        let file = files[i];
+        let song = songs[i];
+        let fileName = file ? file.name : null;
+        let playlistIDs = song.playlistIDs;
+        
+        if (!fileName || !song) {
+            errorEncountered = true;
+            continue;
+        }
+
+        //  TODO: use transaction
+        await db.beginTransaction();
+
+        let newSongID = await SongDatabaseLibrary.addSong(
+            '/' + fileName,
+            song.name ?? null,
+            song.tempo ?? null,
+            db
+        );
+            
+        if (newSongID.sqlMessage) {
+            DatabaseLibrary.rollbackAndLog(db, failures, song.fileName, newSongID.sqlMessage, 'POST /songs');
+            continue;
+        }
+        
+        let newSongPlaylistID = null;
+        if (playlistIDs) {
+            for (let i = 0; i < playlistIDs.length; ++i) {
+                newSongPlaylistID = await SongDatabaseLibrary.addSongPlaylist(
+                    newSongID,
+                    playlistIDs[i],
+                    db
+                );
+                if (!newSongPlaylistID) {
+                    break;
+                }
+            }
+            if(!newSongPlaylistID) {
+                DatabaseLibrary.rollbackAndLog(db, failures, song.fileName, newSongID.sqlMessage, '/songs');
+                continue;
+            }
+        }
+
+        let songAddedToFileServer = await FileServerLibrary.postFile(file, '/songs');
+            
+        if(!songAddedToFileServer) {
+            DatabaseLibrary.rollbackAndLog(db, failures, song.fileName, 'Failed to upload song to file server', '/songs');
+        } else {
+            const message = song.name + ' fully uploaded!'
+            DatabaseLibrary.commitAndLog(db, successes, song.fileName, message, '/songs')
+        }
+    }
+
+    db.end();
+
+    hadFailure = failures.length > 0;
+    hadSuccess = successes.length > 0;
+
+    responseStatus = hadFailure ? 500 : 200;
+    response = {
+        'msg': hadFailure ? 'Some songs failed to upload' : 'Songs uploaded successfully',
+        'successes': hadSuccess ? successes : null,
+        'failures': hadFailure ? failures : null
+    };
+    res.status(responseStatus).send(JSON.stringify(response));
+})
+        
 // **** TEST *****
 router.get('/test', function (req, res) {
-  fs.access('/mnt/public-ext4/main/file.txt', fs.constants.W_OK, (err) => {
-    if (err) {
-      console.log("File cannot be written to");
-      res.status(404).send('Failure');
-    } else {
-      console.log("File can be written to");
-      res.status(200).send('Success');
-    }
-  });
+    fs.access('/mnt/public-ext4/main/file.txt', fs.constants.W_OK, (err) => {
+        if (err) {
+            console.log("File cannot be written to");
+            res.status(404).send('Failure');
+        } else {
+            console.log("File can be written to");
+            res.status(200).send('Success');
+        }
+    });
 })
 
 // necessary with express.Router()
