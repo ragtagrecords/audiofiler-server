@@ -30,7 +30,7 @@ router.get('/songs/:fileName', async function (req, res) {
 
 router.get('/playlists', async function (req, res) {
     const playlists = await SongDatabaseLibrary.getAllPlaylists();
-    if(1) {
+    if(playlists) {
         res.status(200).send(playlists);
         return true;
     } else {
@@ -40,20 +40,18 @@ router.get('/playlists', async function (req, res) {
     
 })
 
-// TODO: needs tested
 router.post('/playlists', async function (req, res) {
-    const playlists = await SongDatabaseLibrary.addPlaylist(req.params.name);
-    if(1) {
-        res.status(200).send(playlists);
+    const db = await DatabaseLibrary.connectToDB();
+    const newPlaylistID = await SongDatabaseLibrary.addPlaylist(db, req.body.name);
+    db.end();
+    if(newPlaylistID) {
+        res.status(200).send({'playlist': newPlaylistID});
         return true;
     } else {
-        res.status(404).send({ message: "Couldn't get songs"});
+        res.status(404).send({'message': "Couldn't get songs"});
         return false;
     }
 })
-
-
-
 
 router.get('/playlists/:playlistID', async function (req, res) {
     const songs = await SongDatabaseLibrary.getSongsByPlaylistID(req.params.playlistID);
