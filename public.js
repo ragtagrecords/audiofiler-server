@@ -9,8 +9,9 @@ const FileServerLibrary = require('./lib/FileServerLibrary.js');
 const Logger = require('./utils/Logger.js');
 
 router.get('/songs', async function (req, res) {
-    const songs = await SongDatabaseLibrary.getAllSongs();
-    
+    const db = await DatabaseLibrary.connectToDB();
+    const songs = await SongDatabaseLibrary.getAllSongs(db);
+    db.end();
     if(songs) {
         res.status(200).send(songs);
         return true;
@@ -28,8 +29,11 @@ router.get('/songs/:fileName', async function (req, res) {
     const song = await FileServerLibrary.getFile(req, res, '/songs');
 })
 
+// Get JSON info for all playlists
 router.get('/playlists', async function (req, res) {
-    const playlists = await SongDatabaseLibrary.getAllPlaylists();
+    const db = await DatabaseLibrary.connectToDB();
+    const playlists = await SongDatabaseLibrary.getAllPlaylists(db);
+    db.end();
     if(playlists) {
         res.status(200).send(playlists);
         return true;
@@ -40,6 +44,7 @@ router.get('/playlists', async function (req, res) {
     
 })
 
+// Add a new row to the playlists table
 router.post('/playlists', async function (req, res) {
     const db = await DatabaseLibrary.connectToDB();
     const newPlaylistID = await SongDatabaseLibrary.addPlaylist(db, req.body.name);
@@ -53,8 +58,12 @@ router.post('/playlists', async function (req, res) {
     }
 })
 
+
+// Get JSON info for all songs in a playlist
 router.get('/playlists/:playlistID', async function (req, res) {
-    const songs = await SongDatabaseLibrary.getSongsByPlaylistID(req.params.playlistID);
+    const db = await DatabaseLibrary.connectToDB();
+    const songs = await SongDatabaseLibrary.getSongsByPlaylistID(db, req.params.playlistID);
+    db.end();
     if(songs) {
         res.status(200).send(songs);
         return true;
@@ -64,12 +73,10 @@ router.get('/playlists/:playlistID', async function (req, res) {
     }
 })
 
-
-// ***** POST *****
-
-/* Add songs to file server and database
+/* 
+* Add songs to file server and database
+* Expects files and JSON song info to be included in request
 * Optionally add them to playlists as well if ID's are provided
-*
 */
 router.post('/songs', async (req, res) => {
     
@@ -96,14 +103,13 @@ router.post('/songs', async (req, res) => {
             continue;
         }
 
-        //  TODO: use transaction
         await db.beginTransaction();
 
         let newSongID = await SongDatabaseLibrary.addSong(
+            db,
             '/' + fileName,
             song.name ?? null,
-            song.tempo ?? null,
-            db
+            song.tempo ?? null
         );
             
         if (newSongID.sqlMessage) {
@@ -115,9 +121,9 @@ router.post('/songs', async (req, res) => {
         if (playlistIDs) {
             for (let i = 0; i < playlistIDs.length; ++i) {
                 newSongPlaylistID = await SongDatabaseLibrary.addSongPlaylist(
+                    db,
                     newSongID,
-                    playlistIDs[i],
-                    db
+                    playlistIDs[i]
                 );
                 if (!newSongPlaylistID) {
                     break;
@@ -151,19 +157,6 @@ router.post('/songs', async (req, res) => {
         'failures': hadFailure ? failures : null
     };
     res.status(responseStatus).send(JSON.stringify(response));
-})
-        
-// **** TEST *****
-router.get('/test', function (req, res) {
-    fs.access('/mnt/public-ext4/main/file.txt', fs.constants.W_OK, (err) => {
-        if (err) {
-            console.log("File cannot be written to");
-            res.status(404).send('Failure');
-        } else {
-            console.log("File can be written to");
-            res.status(200).send('Success');
-        }
-    });
 })
 
 // necessary with express.Router()
