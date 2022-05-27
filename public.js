@@ -5,6 +5,7 @@ const fs = require('fs');
 
 const DatabaseLibrary = require('./lib/DatabaseLibrary.js');
 const SongDatabaseLibrary = require('./lib/SongDatabaseLibrary.js');
+const UserDatabaseLibrary = require('./lib/UserDatabaseLibrary.js');
 const FileServerLibrary = require('./lib/FileServerLibrary.js');
 const Logger = require('./utils/Logger.js');
 
@@ -157,6 +158,69 @@ router.post('/songs', async (req, res) => {
         'failures': hadFailure ? failures : null
     };
     res.status(responseStatus).send(JSON.stringify(response));
+})
+
+router.get('/users', async function (req, res) {
+    const db = await DatabaseLibrary.connectToDB();
+    const users = await UserDatabaseLibrary.getAllUsers(db);
+    db.end();
+    if(users) {
+        res.status(200).send(users);
+        return true;
+    } else {
+        res.status(404).send({ message: "Couldn't get users"});
+        return false;
+    }
+})
+
+// user by username
+router.get('/users/:username', async function (req, res) {
+    const db = await DatabaseLibrary.connectToDB();
+    const user = await UserDatabaseLibrary.getUserByUsername(db, req.params.username);
+    db.end();
+    if(user) {
+        res.status(200).send(user);
+        return true;
+    } else {
+        res.status(404).send({ message: "Couldn't get user"});
+        return false;
+    }
+})
+
+router.post('/signup', async function (req, res) {
+    const username = req.body.username;
+    const password = req.body.password;
+    const hashAndSalt = UserDatabaseLibrary.hashPassword(password);
+    const db = await DatabaseLibrary.connectToDB();
+    const newUser = UserDatabaseLibrary.addUser(db, username, hashAndSalt.hash, hashAndSalt.salt);
+    console.log(newUser);
+    if(newUser) {
+        res.status(200).send("success");
+        return true;
+    } else {
+        res.status(404).send({ message: "Fail"});
+        return false;
+    }
+
+})
+
+router.post('/login', async function (req, res) {
+    const username = req.body.username;
+    const password = req.body.password;
+    const db = await DatabaseLibrary.connectToDB();
+
+    const user = await UserDatabaseLibrary.validateUser(db, username, password);
+    db.end();
+
+    if (!user) {
+        console.log("invalid user");
+        res.status(404).send({ message: "Invalid credentials"});
+        return false;
+    } else {
+        res.status(200).send("success");
+        return true;
+    }
+
 })
 
 // necessary with express.Router()
