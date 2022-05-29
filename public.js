@@ -213,11 +213,10 @@ router.post('/login', async function (req, res) {
     db.end();
 
     if (!user) {
-        console.log("invalid user");
         res.status(404).send({ message: "Invalid credentials"});
         return false;
     } else {
-        res.status(200).send("success");
+        res.status(200).send({ message: "Logged in!"});
         return true;
     }
 
