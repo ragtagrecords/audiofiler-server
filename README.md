@@ -30,7 +30,7 @@ cd audiofiler-fs
 npm install 
 
 // run the app
-npm start 
+node app.js
 ```
 
 ### Test an endpoint
