@@ -48,17 +48,22 @@ router.get('/playlists', async function (req, res) {
 // Add a new row to the playlists table
 router.post('/playlists', async function (req, res) {
     const db = await DatabaseLibrary.connectToDB();
-    const newPlaylistID = await SongDatabaseLibrary.addPlaylist(db, req.body.name);
-    db.end();
-    if(newPlaylistID) {
-        res.status(200).send({'playlist': newPlaylistID});
-        return true;
-    } else {
-        res.status(404).send({'message': "Couldn't get songs"});
+    if (!db) {
+        res.status(404).send({'message': "Failed to connect to database" });
         return false;
     }
-})
+    
+    const newPlaylistID = await SongDatabaseLibrary.addPlaylist(db, req.body.name);
 
+    if (!newPlaylistID) {
+        res.status(404).send({'message': "Failed to create playlist" });
+        return false;
+    }
+
+    const newPlaylist = await SongDatabaseLibrary.getPlaylistByID(db, newPlaylistID);
+    res.status(200).send(newPlaylist);
+    return true;
+})
 
 // Get JSON info for all songs in a playlist
 router.get('/playlists/:playlistID', async function (req, res) {
@@ -193,7 +198,6 @@ router.post('/signup', async function (req, res) {
     const hashAndSalt = UserDatabaseLibrary.hashPassword(password);
     const db = await DatabaseLibrary.connectToDB();
     const newUser = UserDatabaseLibrary.addUser(db, username, hashAndSalt.hash, hashAndSalt.salt);
-    console.log(newUser);
     if(newUser) {
         res.status(200).send("success");
         return true;
