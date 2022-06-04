@@ -1,6 +1,5 @@
 const mysql = require('mysql');
 const Logger = require('../utils/Logger.js');
-const crypto = require('crypto');
 
 // Update userFormatted when we want additional rows from DB
 function formatUsersJSON(users) {
@@ -55,7 +54,8 @@ function getUserByUsername(db, username) {
                         'getUserByUsername',
                         'Returned user from database' 
                     );
-                    resolve(formatUsersJSON(users));
+                    const jsonUsers = formatUsersJSON(users); 
+                    resolve(jsonUsers[0]);
                 }
             }
         );
@@ -85,35 +85,6 @@ function addUser(db, username, hash, salt) {
     });
 }
 
-function hashPassword(password){
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-    let hashSalt = {
-        salt: salt,
-        hash: hash,
-    };
-    return hashSalt;
-}
 
-function validatePassword(password, user){
-    if(!password || !user || !user.salt || !user.hashedPassword) {
-        return false;
-    }
-    const hashedPassword = crypto.pbkdf2Sync(password, user.salt, 1000, 64, 'sha512').toString('hex');
-    return hashedPassword === user.hashedPassword ? user : false;
-}
 
-async function validateUser(db, username, password){
-    const user = await getUserByUsername(db, username);
-    const validUser = validatePassword(password, user[0]);
-
-    if (validUser) {
-        Logger.logSuccess('validateUser()', username + ' logged in');
-        return validUser;
-    } else {
-        Logger.logError('validateUser()', username + ' failed to log in');
-        return false;
-    }
-}
-
-module.exports = { getAllUsers, getUserByUsername, addUser, hashPassword, validateUser };
+module.exports = { getAllUsers, getUserByUsername, addUser};

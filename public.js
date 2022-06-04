@@ -3,15 +3,17 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 
-const DatabaseLibrary = require('./lib/DatabaseLibrary.js');
-const SongDatabaseLibrary = require('./lib/SongDatabaseLibrary.js');
-const UserDatabaseLibrary = require('./lib/UserDatabaseLibrary.js');
-const FileServerLibrary = require('./lib/FileServerLibrary.js');
+
+const AuthSvc = require('./services/AuthSvc.js');
+const DbSvc = require('./services/DbSvc.js');
+const SongSvc = require('./services/SongSvc.js');
+const UserSvc = require('./services/UserSvc.js');
+const FileSvc = require('./services/FileSvc.js');
 const Logger = require('./utils/Logger.js');
 
 router.get('/songs', async function (req, res) {
-    const db = await DatabaseLibrary.connectToDB();
-    const songs = await SongDatabaseLibrary.getAllSongs(db);
+    const db = await DbSvc.connectToDB();
+    const songs = await SongSvc.getAllSongs(db);
     db.end();
     if(songs) {
         res.status(200).send(songs);
@@ -23,17 +25,17 @@ router.get('/songs', async function (req, res) {
 })
 
 router.get('/images/:fileName', async function (req, res) {
-    const song = await FileServerLibrary.getFile(req, res, '/images');
+    const song = await FileSvc.getFile(req, res, '/images');
 })
 
 router.get('/songs/:fileName', async function (req, res) {
-    const song = await FileServerLibrary.getFile(req, res, '/songs');
+    const song = await FileSvc.getFile(req, res, '/songs');
 })
 
 // Get JSON info for all playlists
 router.get('/playlists', async function (req, res) {
-    const db = await DatabaseLibrary.connectToDB();
-    const playlists = await SongDatabaseLibrary.getAllPlaylists(db);
+    const db = await DbSvc.connectToDB();
+    const playlists = await SongSvc.getAllPlaylists(db);
     db.end();
     if(playlists) {
         res.status(200).send(playlists);
@@ -47,28 +49,28 @@ router.get('/playlists', async function (req, res) {
 
 // Add a new row to the playlists table
 router.post('/playlists', async function (req, res) {
-    const db = await DatabaseLibrary.connectToDB();
+    const db = await DbSvc.connectToDB();
     if (!db) {
         res.status(404).send({'message': "Failed to connect to database" });
         return false;
     }
     
-    const newPlaylistID = await SongDatabaseLibrary.addPlaylist(db, req.body.name);
+    const newPlaylistID = await SongSvc.addPlaylist(db, req.body.name);
 
     if (!newPlaylistID) {
         res.status(404).send({'message': "Failed to create playlist" });
         return false;
     }
 
-    const newPlaylist = await SongDatabaseLibrary.getPlaylistByID(db, newPlaylistID);
+    const newPlaylist = await SongSvc.getPlaylistByID(db, newPlaylistID);
     res.status(200).send(newPlaylist);
     return true;
 })
 
 // Get JSON info for all songs in a playlist
 router.get('/playlists/:playlistID', async function (req, res) {
-    const db = await DatabaseLibrary.connectToDB();
-    const songs = await SongDatabaseLibrary.getSongsByPlaylistID(db, req.params.playlistID);
+    const db = await DbSvc.connectToDB();
+    const songs = await SongSvc.getSongsByPlaylistID(db, req.params.playlistID);
     db.end();
     if(songs) {
         res.status(200).send(songs);
@@ -96,7 +98,7 @@ router.post('/songs', async (req, res) => {
 
     let successes = [];
     let failures = [];
-    const db = await DatabaseLibrary.connectToDB();
+    const db = await DbSvc.connectToDB();
     
     for (let i = 0; i < files.length; i++) {
         let file = files[i];
@@ -111,7 +113,7 @@ router.post('/songs', async (req, res) => {
 
         await db.beginTransaction();
 
-        let newSongID = await SongDatabaseLibrary.addSong(
+        let newSongID = await SongSvc.addSong(
             db,
             '/' + fileName,
             song.name ?? null,
@@ -119,14 +121,14 @@ router.post('/songs', async (req, res) => {
         );
             
         if (newSongID.sqlMessage) {
-            DatabaseLibrary.rollbackAndLog(db, failures, song.fileName, newSongID.sqlMessage, 'POST /songs');
+            DbSvc.rollbackAndLog(db, failures, song.fileName, newSongID.sqlMessage, 'POST /songs');
             continue;
         }
         
         let newSongPlaylistID = null;
         if (playlistIDs) {
             for (let i = 0; i < playlistIDs.length; ++i) {
-                newSongPlaylistID = await SongDatabaseLibrary.addSongPlaylist(
+                newSongPlaylistID = await SongSvc.addSongPlaylist(
                     db,
                     newSongID,
                     playlistIDs[i]
@@ -136,18 +138,18 @@ router.post('/songs', async (req, res) => {
                 }
             }
             if(!newSongPlaylistID) {
-                DatabaseLibrary.rollbackAndLog(db, failures, song.fileName, newSongID.sqlMessage, '/songs');
+                DbSvc.rollbackAndLog(db, failures, song.fileName, newSongID.sqlMessage, '/songs');
                 continue;
             }
         }
 
-        let songAddedToFileServer = await FileServerLibrary.postFile(file, '/songs');
+        let songAddedToFileServer = await FileSvc.postFile(file, '/songs');
             
         if(!songAddedToFileServer) {
-            DatabaseLibrary.rollbackAndLog(db, failures, song.fileName, 'Failed to upload song to file server', '/songs');
+            DbSvc.rollbackAndLog(db, failures, song.fileName, 'Failed to upload song to file server', '/songs');
         } else {
             const message = song.name + ' fully uploaded!'
-            DatabaseLibrary.commitAndLog(db, successes, song.fileName, message, '/songs')
+            DbSvc.commitAndLog(db, successes, song.fileName, message, '/songs')
         }
     }
 
@@ -166,8 +168,8 @@ router.post('/songs', async (req, res) => {
 })
 
 router.get('/users', async function (req, res) {
-    const db = await DatabaseLibrary.connectToDB();
-    const users = await UserDatabaseLibrary.getAllUsers(db);
+    const db = await DbSvc.connectToDB();
+    const users = await UserSvc.getAllUsers(db);
     db.end();
     if(users) {
         res.status(200).send(users);
@@ -180,8 +182,8 @@ router.get('/users', async function (req, res) {
 
 // user by username
 router.get('/users/:username', async function (req, res) {
-    const db = await DatabaseLibrary.connectToDB();
-    const user = await UserDatabaseLibrary.getUserByUsername(db, req.params.username);
+    const db = await DbSvc.connectToDB();
+    const user = await UserSvc.getUserByUsername(db, req.params.username);
     db.end();
     if(user) {
         res.status(200).send(user);
@@ -195,9 +197,9 @@ router.get('/users/:username', async function (req, res) {
 router.post('/signup', async function (req, res) {
     const username = req.body.username;
     const password = req.body.password;
-    const hashAndSalt = UserDatabaseLibrary.hashPassword(password);
-    const db = await DatabaseLibrary.connectToDB();
-    const newUser = UserDatabaseLibrary.addUser(db, username, hashAndSalt.hash, hashAndSalt.salt);
+    const hashAndSalt = AuthSvc.hashPassword(password);
+    const db = await DbSvc.connectToDB();
+    const newUser = UserSvc.addUser(db, username, hashAndSalt.hash, hashAndSalt.salt);
     if(newUser) {
         res.status(200).send("success");
         return true;
@@ -211,19 +213,40 @@ router.post('/signup', async function (req, res) {
 router.post('/login', async function (req, res) {
     const username = req.body.username;
     const password = req.body.password;
-    const db = await DatabaseLibrary.connectToDB();
-
-    const user = await UserDatabaseLibrary.validateUser(db, username, password);
+    
+    const db = await DbSvc.connectToDB();
+    const user = await UserSvc.getUserByUsername(db, username);
+    const token = await AuthSvc.validateUser(db, username, password, user);
     db.end();
 
-    if (!user) {
-        res.status(404).send({ message: "Invalid credentials"});
+    if (!token) {
+        res.status(404).json({
+            auth: false,
+        });
         return false;
     } else {
-        res.status(200).send({ message: "Logged in!"});
+        res.status(200).json({
+            auth: true,
+            token: token,
+            result: user
+        });
         return true;
     }
+})
 
+router.get('/authenticate', AuthSvc.verifyJWT, async function (req, res) {
+    if(!req.userID) {
+        res.status(404).send({
+            auth: false,
+        });
+        return false;
+    } else {
+        res.status(200).send({
+            auth: true,
+            userID: req.userID,
+        });
+        return true;
+    }
 })
 
 // necessary with express.Router()

@@ -377,3 +377,6 @@ yarn-error.log*
 # server logs
 stderr.txt
 stdout.txt
+
+# env variables
+.env
