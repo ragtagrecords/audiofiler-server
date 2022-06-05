@@ -199,15 +199,34 @@ router.post('/signup', async function (req, res) {
     const password = req.body.password;
     const hashAndSalt = AuthSvc.hashPassword(password);
     const db = await DbSvc.connectToDB();
-    const newUser = UserSvc.addUser(db, username, hashAndSalt.hash, hashAndSalt.salt);
-    if(newUser) {
-        res.status(200).send("success");
-        return true;
-    } else {
-        res.status(404).send({ message: "Fail"});
+    const newUserID = UserSvc.addUser(db, username, hashAndSalt.hash, hashAndSalt.salt);
+
+    if(!newUserID) {
+        res.status(404).json({
+            auth: false,
+            added: false,
+        });
         return false;
     }
 
+    const user = await UserSvc.getUserByUsername(db, username);
+    const token = await AuthSvc.validateUser(db, username, password, user);
+
+    if (!token) {
+        res.status(404).json({
+            auth: false,
+            added: true,
+        });
+        return false;
+    } else {
+        res.status(200).json({
+            auth: true,
+            token: token,
+            result: user,
+            added: true,
+        });
+        return true;
+    }
 })
 
 router.post('/login', async function (req, res) {
