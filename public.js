@@ -167,6 +167,25 @@ router.post('/songs', async (req, res) => {
     res.status(responseStatus).send(JSON.stringify(response));
 })
 
+router.post('/playlists/:playlistID/song/:songID', async function (req, res) {
+    const db = await DbSvc.connectToDB();
+    const playlistID = req.params.playlistID;
+    const songID = req.params.songID;
+    if (!playlistID || !songID) {
+        res.status(404).send({ message: `Couldn't add song to playlist`});
+        return false;
+    }
+    newSongPlaylistID = await SongSvc.addSongPlaylist(db, songID, playlistID);
+    db.end();
+    if(newSongPlaylistID) {
+        res.status(200).send(newSongPlaylistID);
+        return true;
+    } else {
+        res.status(404).send({ message: `Couldn't add song(id=${songID}) to playlist(id=${playlistID})`});
+        return false;
+    }
+})
+
 router.get('/users', async function (req, res) {
     const db = await DbSvc.connectToDB();
     const users = await UserSvc.getAllUsers(db);
