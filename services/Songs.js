@@ -221,4 +221,38 @@ function getSongsByPlaylistID(db, id) {
     });
 }
 
-module.exports = { getSongByID, addSong, getAllSongs, getSongsByPlaylistID, getPlaylistByID, getAllPlaylists, addPlaylist, addSong, addSongPlaylist };
+function getSongsByParentID(db, parentID) {
+    return new Promise(async resolve => {
+        await db.query(
+            `SELECT songs.id, songs.name, songs.path, songs.artist, songs.tempo, songs.createTimestamp 
+            FROM songs
+            WHERE songs.parentID = ?;`,
+            [parentID],
+            (err, songs) => {
+                if (err) {
+                    Logger.logError('getSongsByParentID()', err.sqlMessage ?? "Database Error, No message found");
+                    resolve(false);
+                } else {
+                    Logger.logSuccess(
+                        'getSongsByParentID()',
+                        `Returned songs with parentID: ${parentID}`
+                    );
+                    resolve(formatSongsJSON(songs));
+                }
+            }
+        );
+    });
+}
+
+module.exports = { 
+    getSongByID,
+    addSong, 
+    getAllSongs, 
+    getSongsByPlaylistID, 
+    getPlaylistByID, 
+    getAllPlaylists, 
+    addPlaylist,
+    addSong, 
+    addSongPlaylist, 
+    getSongsByParentID 
+};

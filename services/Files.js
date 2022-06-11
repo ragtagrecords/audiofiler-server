@@ -29,7 +29,6 @@ function getDirectory(req, res, dir) {
 
         response = { };
 
-        // TODO: use actual ID from database, not i
         for (let i = 0; i < fileNames.length; ++i) {
             response[i] = fileNames[i].name;
         }
@@ -83,7 +82,6 @@ function getFile(req, res, dir) {
     });
 }
 
-// TODO: 
 function postFile(file, dir) {
     return new Promise(resolve => {
         const dirPath = rootDir + dir + '/';
