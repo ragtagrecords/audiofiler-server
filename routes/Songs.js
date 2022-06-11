@@ -72,6 +72,20 @@ exports.getSongsByPlaylistID = (async function (req, res) {
     }
 })
 
+exports.getSongsByParentID = (async function (req, res) {
+    const db = await DbSvc.connectToDB();
+    const parentID = req.params.parentID;
+    const songs = await SongSvc.getSongsByParentID(db, parentID);
+    db.end();
+    if(songs) {
+        res.status(200).send(songs);
+        return true;
+    } else {
+        res.status(404).send({ message: "Couldn't get songs"});
+        return false;
+    }
+})
+
 /* 
 * Add songs to file server and database
 * Expects files and JSON song info to be included in request
