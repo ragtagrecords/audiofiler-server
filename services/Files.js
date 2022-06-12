@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const Logger = require('../utils/Logger.js');
 const FileSystem = require('../utils/FileSystem.js');
+const SongSvc = require('../services/Songs.js');
+const DbSvc = require('../services/Db.js');
 
 // files that are accessible via API live here
 const rootDir = '/public-ext4/main';
@@ -48,15 +50,28 @@ function getDirectory(req, res, dir) {
 
 // todo: use promises
 function getFile(req, res, dir) {
-    return new Promise(resolve => {
+    return new Promise(async resolve => {
         var options = {
             root: rootDir + dir + '/'
         };
 
-        const fileName = req.params.fileName;
+        const songID = req.params.id;
+
+        let song = null;
+
+        const db = await DbSvc.connectToDB();
+
+        if (songID) {
+            song = await SongSvc.getSongByID(db, songID);
+        }
+
+        console.log(song)
+
+        const fileName = songID ? song.zipPath: req.params.fileName;
+        const filePath = rootDir + dir + '/' + fileName;
 
         // should prob check the file out before yeeting a response
-        res.sendFile(fileName, options, function (err) {
+        res.download(filePath, function (err) {
             if (err) {
                 Logger.logError('getFile()', err);
                 resolve(false);

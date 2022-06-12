@@ -1,5 +1,6 @@
 const DbSvc = require('../services/Db.js');
 const SongSvc = require('../services/Songs.js');
+const FileSvc = require('../services/Files.js');
 
 exports.getSongs = (async function (req, res) {
     const db = await DbSvc.connectToDB();
@@ -16,6 +17,10 @@ exports.getSongs = (async function (req, res) {
 
 exports.getFile = (async function (req, res) {
     const song = await FileSvc.getFile(req, res, '/songs');
+})
+
+exports.getZipFile = (async function (req, res) {
+    const song = await FileSvc.getFile(req, res, '/zips');
 })
 
 // Get JSON info for all playlists
@@ -78,32 +83,50 @@ exports.uploadSong = (async (req, res) => {
     const songs = await JSON.parse(req.body.songs);
     let errorEncountered = false;
     
-    if (!files || !songs || (files.length !== songs.length)) {
+    if (!files || !songs) {
         res.status(500).send({ message: "Data not formatted properly"});
+        return false;
     }
 
     let successes = [];
     let failures = [];
     const db = await DbSvc.connectToDB();
     
-    for (let i = 0; i < files.length; i++) {
-        let file = files[i];
+    for (let i = 0; i < songs.length; i++) {
+
+        let songFile = null;
+        let zipFile = null;
         let song = songs[i];
-        let fileName = file ? file.name : null;
         let playlistIDs = song.playlistIDs;
+
+        files.forEach(file => {
+
+            if (song.fileName == file.name){
+                songFile = file;
+            }
+
+            else if(song.zipFileName == file.name){
+                zipFile = file;
+            }
+        })
+
+        console.log(song);
         
-        if (!fileName || !song) {
+        if (!song || !songFile) {
             errorEncountered = true;
             continue;
-        }
+        }        
 
         await db.beginTransaction();
 
+
+
         let newSongID = await SongSvc.addSong(
             db,
-            '/' + fileName,
+            '/' + songFile.name,
             song.name ?? null,
-            song.tempo ?? null
+            song.tempo ?? null,
+            zipFile ? '/' + zipFile.name : null,
         );
             
         if (newSongID.sqlMessage) {
@@ -129,12 +152,24 @@ exports.uploadSong = (async (req, res) => {
             }
         }
 
-        let songAddedToFileServer = await FileSvc.postFile(file, '/songs');
-            
+        let songAddedToFileServer = await FileSvc.postFile(songFile, '/songs');
+        let zipAddedToFileServer = null;
+
+        if (zipFile)
+        {
+            zipAddedToFileServer = await FileSvc.postFile(zipFile, '/zips');
+        }
+
+        const didZipUploadFail = zipFile && !zipAddedToFileServer; 
+        console.log(didZipUploadFail);
+        
         if(!songAddedToFileServer) {
             DbSvc.rollbackAndLog(db, failures, song.fileName, 'Failed to upload song to file server', '/songs');
+        } else if (didZipUploadFail) {
+            DbSvc.rollbackAndLog(db, failures, song.zipFileName, 'Failed to upload project zip to file server', '/songs');
         } else {
             const message = song.name + ' fully uploaded!'
+            console.log(message);
             DbSvc.commitAndLog(db, successes, song.fileName, message, '/songs')
         }
     }
