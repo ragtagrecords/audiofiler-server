@@ -18,7 +18,11 @@ const Auth = require('./routes/Auth.js');
 // Songs
 router.get('/songs', Songs.getSongs);
 
+
 router.get('/songs/:fileName', Songs.getFile);
+
+
+router.get('/songs/:id/zip', Songs.getZipFile);
 
 // Get JSON info for all playlists
 router.get('/playlists', Songs.getPlaylists);

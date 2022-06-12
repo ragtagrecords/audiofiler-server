@@ -14,7 +14,8 @@ function formatSongsJSON(songs) {
             path: rootURL + song.path,
             artist: song.artists ?? '',
             tempo: song.tempo ?? '',
-            createTimestamp: song.createTimestamp ?? ''
+            createTimestamp: song.createTimestamp ?? '',
+            zipPath: song.zipPath ?? '',
         };
 
         songsFormatted.push(songFormatted);
@@ -36,14 +37,15 @@ function formatPlaylistsJSON(playlists) {
     return playlistsFormatted;
 }
 
-function addSong(db, path, name, tempo) {
+function addSong(db, songPath, name, tempo, zipPath = null) {
     return new Promise(async resolve => {
         await db.query(
-            `INSERT INTO songs (path, name, tempo) VALUES (?,?,?)`,
+            `INSERT INTO songs (path, name, tempo, zipPath) VALUES (?,?,?,?)`,
             [
-                path,
+                songPath,
                 name,
-                tempo ?? null
+                tempo ?? null,
+                zipPath ?? null,
             ],
             (err, result) => {
                 if (err) {
@@ -129,6 +131,28 @@ function getAllSongs(db) {
     });
 }
 
+function getSongByID(db, id) {
+    return new Promise(async resolve => {
+        await db.query(
+            `SELECT * FROM songs where id = ?`,
+            [id],
+            (err, songs) => {
+                if (err) {
+                    Logger.logError('getSongByID()', err.sqlMessage ?? "Database Error, No message found");
+                    resolve(false);
+                } else {
+                    Logger.logSuccess(
+                        'getSongByID',
+                        'Returned song from database' 
+                    );
+                    resolve(formatSongsJSON(songs)[0]);
+                }
+            }
+        );
+
+    });
+}
+
 function getAllPlaylists(db) {
     return new Promise(async resolve => {
         await db.query(
@@ -197,4 +221,4 @@ function getSongsByPlaylistID(db, id) {
     });
 }
 
-module.exports = { addSong, getAllSongs, getSongsByPlaylistID, getPlaylistByID, getAllPlaylists, addPlaylist, addSong, addSongPlaylist };
+module.exports = { getSongByID, addSong, getAllSongs, getSongsByPlaylistID, getPlaylistByID, getAllPlaylists, addPlaylist, addSong, addSongPlaylist };
