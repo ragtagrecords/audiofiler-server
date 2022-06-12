@@ -8,9 +8,9 @@ const rootDir = '/public-ext4/main';
 
 // returns a JSON list of all the files in a given dir
 // not currently being used
-function getDirectory(req, res, relativePath) {
+function getDirectory(req, res, dir) {
     return new Promise(resolve => {
-        const dirPath = rootDir + relativePath;
+        const dirPath = rootDir + dir;
 
         options = {
             withFileTypes: true,
@@ -41,7 +41,7 @@ function getDirectory(req, res, relativePath) {
         }
 
         res.status(200).send(response);
-        Logger.logSuccess('getDirectory()', 'Sent ' + relativePath );
+        Logger.logSuccess('getDirectory()', 'Sent ' + dir );
         resolve(true);
     });
 }
@@ -69,9 +69,9 @@ function getFile(req, res, dir) {
 }
 
 // TODO: 
-function postFile(file, relativePath) {
+function postFile(file, dir) {
     return new Promise(resolve => {
-        const dirPath = rootDir + relativePath + '/';
+        const dirPath = rootDir + dir + '/';
         const fileName = file.name;
         const fileSizeMB = file.size / 1e6;
         
