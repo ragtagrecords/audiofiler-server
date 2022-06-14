@@ -15,7 +15,7 @@ function formatSongsJSON(songs) {
             artist: song.artists ?? '',
             tempo: song.tempo ?? '',
             createTimestamp: song.createTimestamp ?? '',
-            zipPath: song.zipPath ?? '',
+            zipPath: song.zipPath? rootURL + song.zipPath : '',
         };
 
         songsFormatted.push(songFormatted);
