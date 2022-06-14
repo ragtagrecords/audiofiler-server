@@ -200,7 +200,7 @@ function getPlaylistByID(db, id) {
 function getSongsByPlaylistID(db, id) {
     return new Promise(async resolve => {
         await db.query(
-            `SELECT songs.id, songs.name, songs.path, songs.artist, songs.tempo, songs.createTimestamp 
+            `SELECT songs.id, songs.name, songs.path, songs.artist, songs.tempo, songs.zipPath, songs.createTimestamp 
             FROM songs
             INNER JOIN songPlaylists ON songs.id = songPlaylists.songID
             WHERE songPlaylists.playlistID = ?;`,
