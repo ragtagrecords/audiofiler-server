@@ -68,6 +68,7 @@ function getFile(req, res, dir) {
 
         const fileName = songID ? song.zipPath: req.params.fileName;
         const filePath = rootDir + dir + '/' + fileName;
+        console.log(fileName);
 
         // should prob check the file out before yeeting a response
         res.download(filePath, function (err) {
