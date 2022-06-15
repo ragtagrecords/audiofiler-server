@@ -123,17 +123,14 @@ exports.uploadSong = (async (req, res) => {
                 zipFile = file;
             }
         })
-
-        console.log(song);
         
         if (!song || !songFile) {
             errorEncountered = true;
+            failures.push(songs[i].fileName);
             continue;
         }        
 
         await db.beginTransaction();
-
-
 
         let newSongID = await SongSvc.addSong(
             db,
@@ -141,6 +138,7 @@ exports.uploadSong = (async (req, res) => {
             song.name ?? null,
             song.tempo ?? null,
             zipFile ? '/' + zipFile.name : null,
+            song.parentID ?? null
         );
             
         if (newSongID.sqlMessage) {
@@ -175,7 +173,6 @@ exports.uploadSong = (async (req, res) => {
         }
 
         const didZipUploadFail = zipFile && !zipAddedToFileServer; 
-        console.log(didZipUploadFail);
         
         if(!songAddedToFileServer) {
             DbSvc.rollbackAndLog(db, failures, song.fileName, 'Failed to upload song to file server', '/songs');
@@ -183,14 +180,13 @@ exports.uploadSong = (async (req, res) => {
             DbSvc.rollbackAndLog(db, failures, song.zipFileName, 'Failed to upload project zip to file server', '/songs');
         } else {
             const message = song.name + ' fully uploaded!'
-            console.log(message);
             DbSvc.commitAndLog(db, successes, song.fileName, message, '/songs')
         }
     }
 
     db.end();
 
-    hadFailure = failures.length > 0;
+    hadFailure = failures.length > 0 || errorEncountered;
     hadSuccess = successes.length > 0;
 
     responseStatus = hadFailure ? 500 : 200;

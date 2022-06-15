@@ -6,10 +6,4 @@ function logSuccess(functionName, message) {
     console.log('SUCCESS: ' + functionName + " | " + message);
 }
 
-/*
-function logAPI(functionName, type, username, message) {
-    console.log(functionName + "(" + type + "): " + username + " | " + message);
-}
-*/
-
 module.exports = { logError, logSuccess };

@@ -18,7 +18,6 @@ function formatSongsJSON(songs) {
             zipPath: song.zipPath ? `${rootURL}/${song.id}/zip` : '',
         };
 
-        console.log(songFormatted.zipPath);
         songsFormatted.push(songFormatted);
     });
     return songsFormatted;
@@ -38,15 +37,16 @@ function formatPlaylistsJSON(playlists) {
     return playlistsFormatted;
 }
 
-function addSong(db, songPath, name, tempo, zipPath = null) {
+function addSong(db, songPath, name, tempo, zipPath = null, parentID = null) {
     return new Promise(async resolve => {
         await db.query(
-            `INSERT INTO songs (path, name, tempo, zipPath) VALUES (?,?,?,?)`,
+            `INSERT INTO songs (path, name, tempo, zipPath, parentID) VALUES (?,?,?,?,?)`,
             [
                 songPath,
                 name,
-                tempo ?? null,
+                tempo ? tempo : null,
                 zipPath ?? null,
+                parentID ?? null
             ],
             (err, result) => {
                 if (err) {
