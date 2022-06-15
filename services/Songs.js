@@ -132,7 +132,7 @@ function getAllSongs(db) {
     });
 }
 
-function getSongByID(db, id) {
+function getSongByID(db, id, formatted = true) {
     return new Promise(async resolve => {
         await db.query(
             `SELECT * FROM songs where id = ?`,
@@ -146,7 +146,7 @@ function getSongByID(db, id) {
                         'getSongByID',
                         'Returned song from database' 
                     );
-                    resolve(formatSongsJSON(songs)[0]);
+                    resolve(formatted ? formatSongsJSON(songs)[0] : songs[0]);
                 }
             }
         );

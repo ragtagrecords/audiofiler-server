@@ -61,14 +61,11 @@ function getFile(req, res, dir) {
         const db = await DbSvc.connectToDB();
 
         if (songID) {
-            song = await SongSvc.getSongByID(db, songID);
+            song = await SongSvc.getSongByID(db, songID, false);
         }
 
-        console.log(song)
-
-        const fileName = songID ? song.zipPath: req.params.fileName;
-        const filePath = rootDir + dir + '/' + fileName;
-        console.log(fileName);
+        const fileName = songID ? song.zipPath : `/${req.params.fileName}`;
+        const filePath = rootDir + dir + fileName;
 
         // should prob check the file out before yeeting a response
         res.download(filePath, function (err) {
