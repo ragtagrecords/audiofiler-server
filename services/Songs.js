@@ -120,7 +120,7 @@ function getAllSongs(db) {
                     resolve(false);
                 } else {
                     Logger.logSuccess(
-                        'getAllSongs',
+                        'getAllSongs  updateSongName',
                         'Returned all songs from database' 
                     );
                     resolve(formatSongsJSON(songs));
@@ -244,6 +244,44 @@ function getSongsByParentID(db, parentID) {
     });
 }
 
+function updateSongName(db, songID, newName) {
+    return new Promise(async resolve => {
+        db.query(
+            "UPDATE songs SET name = ? WHERE id = ?",
+            [newName, songID],
+            (err, result) => {
+                if (err)
+                {
+                    console.log(err);
+                    resolve(false);
+                } else {
+                    console.log(result);
+                    resolve(result);
+                }
+            }
+        );
+    })
+}
+
+function updatePlaylistName(db, playlistID, newName) {
+    return new Promise(async resolve => {
+        db.query(
+            "UPDATE playlists SET name = ? WHERE id = ?",
+            [newName, playlistID],
+            (err, result) => {
+                if (err)
+                {
+                    console.log(err);
+                    resolve(false);
+                } else {
+                    console.log(result);
+                    resolve(result);
+                }
+            }
+        );
+    })
+}
+
 module.exports = { 
     getSongByID,
     addSong, 
@@ -254,5 +292,7 @@ module.exports = {
     addPlaylist,
     addSong, 
     addSongPlaylist, 
-    getSongsByParentID 
+    getSongsByParentID, 
+    updateSongName,
+    updatePlaylistName,
 };

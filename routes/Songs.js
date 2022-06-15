@@ -220,3 +220,37 @@ exports.addSongToPlaylist = (async function (req, res) {
         return false;
     }
 })
+
+exports.updateSongData = (async function (req, res) {
+    const db = await DbSvc.connectToDB();
+    const id = req.params.id;
+    const newName = req.body.name;
+
+    newSongName = await SongSvc.updateSongName(db, id, newName);
+    db.end();
+
+    if(newSongName) {
+        res.status(200).send(newSongName);
+        return true;
+    } else {
+        res.status(404).send({ message: `FAIL: Couldn't change song name(id=${songID}) to ${newName})`});
+        return false;
+    }
+})
+
+exports.updatePlaylistData = (async function (req, res) {
+    const db = await DbSvc.connectToDB();
+    const id = req.params.id;
+    const newName = req.body.name;
+
+    newPlaylistName = await SongSvc.updatePlaylistName(db, id, newName);
+    db.end();
+
+    if(newPlaylistName) {
+        res.status(200).send(newPlaylistName);
+        return true;
+    } else {
+        res.status(404).send({ message: `FAIL: Couldn't change playlist name(id=${songID}) to ${newName})`});
+        return false;   
+    }
+})
