@@ -13,7 +13,6 @@ const rootDir = '/public-ext4/main';
 function getDirectory(req, res, dir) {
     return new Promise(resolve => {
         const dirPath = rootDir + dir;
-
         options = {
             withFileTypes: true,
         }
@@ -85,7 +84,7 @@ function postFile(file, dir) {
         const dirPath = rootDir + dir + '/';
         const fileName = file.name;
         const fileSizeMB = file.size / 1e6;
-        
+
         file.mv(`${dirPath}${fileName}`, (err) => {
 
             if (err) {

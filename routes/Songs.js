@@ -181,7 +181,7 @@ exports.uploadSongs = (async (req, res) => {
 
         
         // Upload files
-        let songAddedToFileServer = await FileSvc.postFile(songFile, 'Songs::uploadSongs()');
+        let songAddedToFileServer = await FileSvc.postFile(songFile, '/songs');
         let zipAddedToFileServer = null;
         if (zipFile) {
             zipAddedToFileServer = await FileSvc.postFile(zipFile, '/zips');
