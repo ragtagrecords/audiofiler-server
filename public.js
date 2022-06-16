@@ -13,10 +13,11 @@ const Auth = require('./routes/Auth.js');
 
 // Songs
 router.get('/songs', Songs.getSongs);
-router.post('/songs', Songs.uploadSong);
+router.post('/songs', Songs.uploadSongs);
 router.get('/songs/:fileName', Songs.getFile);
 router.get('/songs/:id/zip', Songs.getZipFile);
 router.get('/songs/parent/:parentID', Songs.getSongsByParentID);
+router.post('/songs/parent/:parentID', Songs.uploadSongs);
 
 // Playlists
 router.get('/playlists', Songs.getPlaylists);

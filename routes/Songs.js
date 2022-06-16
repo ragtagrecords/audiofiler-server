@@ -91,47 +91,53 @@ exports.getSongsByParentID = (async function (req, res) {
 * Expects files and JSON song info to be included in request
 * Optionally add them to playlists as well if ID's are provided
 */
-exports.uploadSong = (async (req, res) => {
+exports.uploadSongs = (async (req, res) => {
     
+    const db = await DbSvc.connectToDB();
     const files = Object.values(req.files);
     const songs = await JSON.parse(req.body.songs);
-    let errorEncountered = false;
+    let parentSong = null;
+    if (req.params.parentID) {
+        parentSong = await SongSvc.getSongByID(db, req.params.parentID, false);
+    }
     
+    // Song info and file required to upload
     if (!files || !songs) {
         res.status(500).send({ message: "Data not formatted properly"});
         return false;
     }
 
+    let newParentID = null;
     let successes = [];
     let failures = [];
-    const db = await DbSvc.connectToDB();
     
+    // For each song
     for (let i = 0; i < songs.length; i++) {
 
-        let songFile = null;
-        let zipFile = null;
         let song = songs[i];
         let playlistIDs = song.playlistIDs;
+        let songFile = null;
+        let zipFile = null;
 
+        // Grab files for this song
         files.forEach(file => {
-
             if (song.fileName == file.name){
                 songFile = file;
             }
-
             else if(song.zipFileName == file.name){
                 zipFile = file;
             }
         })
         
-        if (!song || !songFile) {
-            errorEncountered = true;
-            failures.push(songs[i].fileName);
+        // Song info and file are required to upload
+        if (!song.name || !songFile) {
+            failures.push("unknown");
             continue;
         }        
 
         await db.beginTransaction();
 
+        // Add song to database
         let newSongID = await SongSvc.addSong(
             db,
             '/' + songFile.name,
@@ -146,7 +152,14 @@ exports.uploadSong = (async (req, res) => {
             continue;
         }
         
+        // if there is a new parent
+        if (parentSong && !song.parentID) {
+            newParentID = newSongID;
+        }
+        
         let newSongPlaylistID = null;
+
+        // Add song to playlists in database
         if (playlistIDs) {
             for (let i = 0; i < playlistIDs.length; ++i) {
                 newSongPlaylistID = await SongSvc.addSongPlaylist(
@@ -159,44 +172,73 @@ exports.uploadSong = (async (req, res) => {
                 }
             }
             if(!newSongPlaylistID) {
-                DbSvc.rollbackAndLog(db, failures, song.fileName, newSongID.sqlMessage, '/songs');
+                DbSvc.rollbackAndLog(db, failures, song.fileName, newSongID.sqlMessage, 'Songs::uploadSongs()');
                 continue;
             }
         }
 
-        let songAddedToFileServer = await FileSvc.postFile(songFile, '/songs');
-        let zipAddedToFileServer = null;
+        DbSvc.commitAndLog(db, successes, song.fileName, 'custom ending', 'Songs::uploadSongs()')
 
-        if (zipFile)
-        {
+        
+        // Upload files
+        let songAddedToFileServer = await FileSvc.postFile(songFile, 'Songs::uploadSongs()');
+        let zipAddedToFileServer = null;
+        if (zipFile) {
             zipAddedToFileServer = await FileSvc.postFile(zipFile, '/zips');
         }
 
+        // Handle errors
         const didZipUploadFail = zipFile && !zipAddedToFileServer; 
-        
         if(!songAddedToFileServer) {
-            DbSvc.rollbackAndLog(db, failures, song.fileName, 'Failed to upload song to file server', '/songs');
+            DbSvc.rollbackAndLog(db, failures, song.fileName, 'Failed to upload song to file server', 'Songs::uploadSongs()');
         } else if (didZipUploadFail) {
-            DbSvc.rollbackAndLog(db, failures, song.zipFileName, 'Failed to upload project zip to file server', '/songs');
+            DbSvc.rollbackAndLog(db, failures, song.zipFileName, 'Failed to upload project zip to file server', 'Songs::uploadSongs()');
         } else {
             const message = song.name + ' fully uploaded!'
-            DbSvc.commitAndLog(db, successes, song.fileName, message, '/songs')
+            DbSvc.commitAndLog(db, successes, song.fileName, message, 'Songs::uploadSongs()')
         }
     }
 
+    let parentUpdateResult = false;
+    if (parentSong) {
+        let updatedParentSong = {...parentSong};
+        if (newParentID) { // if there is a new parent
+            updatedParentSong.isParent = 0;
+            updatedParentSong.parentID = newParentID;
+        } else { // if original song is becoming a parent
+            updatedParentSong.isParent = 1;
+        }
+        
+        parentUpdateResult = await SongSvc.updateSongParent(db, updatedParentSong);
+    }
+
     db.end();
+    let message = null;
 
-    hadFailure = failures.length > 0 || errorEncountered;
-    hadSuccess = successes.length > 0;
+    // check for errors
+    if (failures.length = 0 && parentSong && !parentUpdateResult) {
+            message = 'All new songs uploaded successfully, but there was an issue updating the original';
+    } else if (failures.length > 0 && successes.length > 0) {
+        message = "Some songs didn't upload successfully";
+    } else if (successes.length === 0) {
+        message = "All songs failed to upload";
+    }
 
-    responseStatus = hadFailure ? 500 : 200;
+    responseStatus = message ? 500 : 200;
     response = {
-        'msg': hadFailure ? 'Some songs failed to upload' : 'Songs uploaded successfully',
-        'successes': hadSuccess ? successes : null,
-        'failures': hadFailure ? failures : null
+        'msg': message ?? 'All songs uploaded successfully',
+        'successes': successes,
+        'failures': failures
     };
     res.status(responseStatus).send(JSON.stringify(response));
 })
+
+// clone above but adjust for parent, maybe just add 2nd param
+// need to update parent song if there is new parent
+// make sure parentID is set on all the children
+// get parent song from id req params
+
+
 
 exports.addSongToPlaylist = (async function (req, res) {
     const db = await DbSvc.connectToDB();

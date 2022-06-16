@@ -245,9 +245,33 @@ function getSongsByParentID(db, parentID) {
     });
 }
 
+// eventually make this updateSong - all the columns
+function updateSongParent(db, parentSong) {
+    return new Promise(async resolve => {
+        const { isParent, parentID, id } = parentSong;
+        await db.query(
+            `UPDATE songs 
+            SET isParent = ?, parentID = ?
+            WHERE id = ?;`,
+            [isParent, parentID, id],
+            (err, res) => {
+                if (err) {
+                    Logger.logError('updateSongParent()', err.sqlMessage ?? "Database Error, No message found");
+                    resolve(false);
+                } else {
+                    Logger.logSuccess(
+                        'updateSongParent()',
+                        `Updated parent: ${parentSong.name}`
+                    );
+                    resolve(true);
+                }
+            }
+        );
+    });
+}
+
 module.exports = { 
     getSongByID,
-    addSong, 
     getAllSongs, 
     getSongsByPlaylistID, 
     getPlaylistByID, 
@@ -255,5 +279,6 @@ module.exports = {
     addPlaylist,
     addSong, 
     addSongPlaylist, 
-    getSongsByParentID 
+    getSongsByParentID,
+    updateSongParent
 };
