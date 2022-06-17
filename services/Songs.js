@@ -1,6 +1,9 @@
 const mysql = require('mysql');
 const Logger = require('../utils/Logger.js');
 
+const allSongColumns = 'songs.id, songs.name, songs.path, songs.artist,'
+    + 'songs.tempo, songs.createTimestamp, songs.isParent, songs.parentID, songs.zipPath';
+
 // all paths stored in DB are relative to this URL
 const rootURL = 'http://api.ragtagrecords.com/public/songs';
 
@@ -16,6 +19,7 @@ function formatSongsJSON(songs) {
             tempo: song.tempo ?? '',
             createTimestamp: song.createTimestamp ?? '',
             zipPath: song.zipPath ? `${rootURL}/${song.id}/zip` : '',
+            isParent: song.isParent ?? false
         };
 
         songsFormatted.push(songFormatted);
@@ -113,7 +117,8 @@ function addPlaylist(db, name) {
 function getAllSongs(db) {
     return new Promise(async resolve => {
         await db.query(
-            `SELECT * FROM songs`,
+            `SELECT ${allSongColumns}
+            FROM songs`,
             [],
             (err, songs) => {
                 if (err) {
@@ -135,7 +140,8 @@ function getAllSongs(db) {
 function getSongByID(db, id, formatted = true) {
     return new Promise(async resolve => {
         await db.query(
-            `SELECT * FROM songs where id = ?`,
+            `SELECT ${allSongColumns}
+            FROM songs where id = ?`,
             [id],
             (err, songs) => {
                 if (err) {
@@ -201,7 +207,7 @@ function getPlaylistByID(db, id) {
 function getSongsByPlaylistID(db, id) {
     return new Promise(async resolve => {
         await db.query(
-            `SELECT songs.id, songs.name, songs.path, songs.artist, songs.tempo, songs.zipPath, songs.createTimestamp 
+            `SELECT ${allSongColumns}
             FROM songs
             INNER JOIN songPlaylists ON songs.id = songPlaylists.songID
             WHERE songPlaylists.playlistID = ?;`,
@@ -225,7 +231,7 @@ function getSongsByPlaylistID(db, id) {
 function getSongsByParentID(db, parentID) {
     return new Promise(async resolve => {
         await db.query(
-            `SELECT songs.id, songs.name, songs.path, songs.artist, songs.tempo, songs.createTimestamp 
+            `SELECT ${allSongColumns} 
             FROM songs
             WHERE songs.parentID = ?;`,
             [parentID],
