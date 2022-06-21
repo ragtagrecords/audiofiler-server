@@ -5,9 +5,9 @@ const allSongColumns = 'songs.id, songs.name, songs.path, songs.artist,'
     + 'songs.tempo, songs.createTimestamp, songs.isParent, songs.parentID, songs.zipPath';
 
 // all paths stored in DB are relative to this URL
-const rootURL = 'http://api.ragtagrecords.com/public/songs';
+const rootURL = 'http://files.ragtagrecords.com';
 
-// Update songFormatted when we want additional rows from DB
+// Main purpose is to add rootURL to the paths before returning to the client
 function formatSongsJSON(songs) {
     let songsFormatted = [];
     songs.forEach(song => {
@@ -18,7 +18,7 @@ function formatSongsJSON(songs) {
             artist: song.artists ?? '',
             tempo: song.tempo ?? '',
             createTimestamp: song.createTimestamp ?? '',
-            zipPath: song.zipPath ? `${rootURL}/${song.id}/zip` : '',
+            zipPath: song.zipPath ? rootURL + song.zipPath : '',
             isParent: song.isParent ?? false
         };
 
@@ -41,21 +41,32 @@ function formatPlaylistsJSON(playlists) {
     return playlistsFormatted;
 }
 
-function addSong(db, songPath, name, tempo, zipPath = null, parentID = null) {
+function addSong(
+  db,
+  { 
+    name,
+    tempo,
+    path,
+    zipPath = null,
+    isParent = 0,
+    parentID = null,
+  }
+) {
     return new Promise(async resolve => {
         await db.query(
-            `INSERT INTO songs (path, name, tempo, zipPath, parentID) VALUES (?,?,?,?,?)`,
+            `INSERT INTO songs (path, name, tempo, zipPath, isParent, parentID) VALUES (?,?,?,?,?,?)`,
             [
-                songPath,
+                path,
                 name,
                 tempo ? tempo : null,
                 zipPath ?? null,
-                parentID ?? null
+                isParent,
+                parentID ?? null,
             ],
             (err, result) => {
                 if (err) {
                     Logger.logError('addSong()', err.sqlMessage ?? "Database Error, No message found");
-                    resolve(err);
+                    resolve(false);
                 } else {
                     Logger.logSuccess('addSong()', name + ' added to DB table (songs)');
                     resolve(result.insertId);
@@ -84,7 +95,7 @@ function addSongPlaylist(db, songID, playlistID) {
                 } else {
                     Logger.logSuccess(
                         'addSongPlaylist()',
-                        songID + ' added to DB table (songPlaylist)' 
+                        `${songID} added to playlist ${playlistID}` 
                     );
                     resolve(result.insertId);
                 }
@@ -114,6 +125,8 @@ function addPlaylist(db, name) {
     });
 }
 
+
+// TODO: Abstract these functions into a single getAllRows(tableName) func
 function getAllSongs(db) {
     return new Promise(async resolve => {
         await db.query(
