@@ -6,20 +6,27 @@ const AuthSvc = require('./services/Auth.js');
 
 // Import route functions
 const Songs = require('./routes/Songs.js');
+const Playlists = require('./routes/Playlists.js');
 const Users = require('./routes/Users.js');
 const Auth = require('./routes/Auth.js');
 
+// Root
+router.get('/', (req, res) => {
+  res.status(200).send('Welcome to the Audiofiler API');
+});
+
 // Songs
 router.get('/songs', Songs.getSongs);
+router.get('/songs/:id', Songs.getSongByID);
 router.post('/songs', Songs.addSongToDB);
-router.get('/songs/:fileName', Songs.getFile);
-router.get('/songs/:id/zip', Songs.getZipFile);
+router.delete('/songs/:id', Songs.deleteSong);
+router.get('/songs/playlist/:playlistID', Songs.getSongsByPlaylistID);
 router.get('/songs/parent/:parentID', Songs.getSongsByParentID);
 
 // Playlists
-router.get('/playlists', Songs.getPlaylists);
-router.post('/playlists', Songs.createPlaylist);
-router.get('/playlists/:playlistID', Songs.getSongsByPlaylistID);
+router.get('/playlists', Playlists.getPlaylists);
+router.post('/playlists', Playlists.addPlaylist);
+router.get('/playlists/:playlistID', Playlists.getPlaylist);
 router.post('/playlists/:playlistID/song/:songID', Songs.addSongToPlaylist);
 
 // Users

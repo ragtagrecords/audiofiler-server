@@ -1,23 +1,6 @@
 const mysql = require('mysql');
 const Logger = require('../utils/Logger.js');
 
-// Update userFormatted when we want additional rows from DB
-function formatUsersJSON(users) {
-    let usersFormatted = [];
-    users.forEach(user => {
-        const userFormatted = {
-            id: user.id,
-            username: user.username,
-            createTimestamp: user.createTimestamp ?? '',
-            hashedPassword: user.hashedPassword,
-            salt: user.salt,
-        };
-
-        usersFormatted.push(userFormatted);
-    });
-    return usersFormatted;
-}
-
 function getAllUsers(db) {
     return new Promise(async resolve => {
         await db.query(
@@ -32,7 +15,7 @@ function getAllUsers(db) {
                         'getAllUsers',
                         'Returned all users from database' 
                     );
-                    resolve(formatUsersJSON(users));
+                    resolve(users);
                 }
             }
         );
@@ -54,8 +37,7 @@ function getUserByUsername(db, username) {
                         'getUserByUsername',
                         'Returned user from database' 
                     );
-                    const jsonUsers = formatUsersJSON(users); 
-                    resolve(jsonUsers[0]);
+                    resolve(users[0]);
                 }
             }
         );
