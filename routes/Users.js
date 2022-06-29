@@ -1,6 +1,6 @@
 const DbSvc = require('../services/Db.js');
-const UserSvc = require('../services/Users.js');
 const AuthSvc = require('../services/Auth.js');
+const UserSvc = require('../services/Users.js');
 
 exports.getUsers = (async function (req, res) {
     const db = await DbSvc.connectToDB();
@@ -29,6 +29,22 @@ exports.getUserByUsername = (async function (req, res) {
 })
 
 exports.createUser = (async function (req, res) {
+    if (req.data) {
+        console.log("Data");
+        console.log(req.data);
+        console.log(JSON.parse(req.data));
+    }
+
+    if (req.body) {
+        console.log("body");
+        console.log(req.body);
+    }
+
+    if (req.password) {
+        console.log("password");
+        console.log(req.password);
+    }
+
     const username = req.body.username;
     const password = req.body.password;
     const hashAndSalt = AuthSvc.hashPassword(password);

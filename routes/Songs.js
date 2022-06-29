@@ -10,51 +10,23 @@ exports.getSongs = (async function (req, res) {
         return true;
     } else {
         res.status(404).send({ message: "Couldn't get songs"});
-        return false;
+        return null;
     }
 })
 
-exports.getFile = (async function (req, res) {
-    const song = await FileSvc.getFile(req, res, '/songs');
-})
-
-exports.getZipFile = (async function (req, res) {
-    const song = await FileSvc.getFile(req, res, '/zips');
-})
-
-// Get JSON info for all playlists
-exports.getPlaylists = (async function (req, res) {
+// Get JSON info for a single song
+exports.getSongByID = (async function (req, res) {
     const db = await DbSvc.connectToDB();
-    const playlists = await SongSvc.getAllPlaylists(db);
+    const song = await SongSvc.getSongByID(db, req.params.id, true);
     db.end();
-    if(playlists) {
-        res.status(200).send(playlists);
+
+    if(song && song.name) {
+        res.status(200).send(song);
         return true;
     } else {
-        res.status(404).send({ message: "Couldn't get songs"});
-        return false;
+        res.status(404).send({ message: "Couldn't get song"});
+        return null;
     }
-    
-})
-
-// Add a new row to the playlists table
-exports.createPlaylist = (async function (req, res) {
-    const db = await DbSvc.connectToDB();
-    if (!db) {
-        res.status(404).send({'message': "Failed to connect to database" });
-        return false;
-    }
-    
-    const newPlaylistID = await SongSvc.addPlaylist(db, req.body.name);
-
-    if (!newPlaylistID) {
-        res.status(404).send({'message': "Failed to create playlist" });
-        return false;
-    }
-
-    const newPlaylist = await SongSvc.getPlaylistByID(db, newPlaylistID);
-    res.status(200).send(newPlaylist);
-    return true;
 })
 
 // Get JSON info for all songs in a playlist
@@ -62,12 +34,13 @@ exports.getSongsByPlaylistID = (async function (req, res) {
     const db = await DbSvc.connectToDB();
     const songs = await SongSvc.getSongsByPlaylistID(db, req.params.playlistID);
     db.end();
-    if(songs) {
+
+    if(songs && songs.length > 0) {
         res.status(200).send(songs);
         return true;
     } else {
         res.status(404).send({ message: "Couldn't get songs"});
-        return false;
+        return null;
     }
 })
 
@@ -76,62 +49,67 @@ exports.getSongsByParentID = (async function (req, res) {
     const parentID = req.params.parentID;
     const songs = await SongSvc.getSongsByParentID(db, parentID);
     db.end();
-    if(songs) {
+
+    if(songs && songs.length > 0) {
         res.status(200).send(songs);
         return true;
     } else {
         res.status(404).send({ message: "Couldn't get songs"});
-        return false;
+        return null;
     }
 })
 
 exports.addSongToPlaylist = (async function (req, res) {
-    const db = await DbSvc.connectToDB();
     const playlistID = req.params.playlistID;
     const songID = req.params.songID;
+
     if (!playlistID || !songID) {
         res.status(404).send({ message: `Couldn't add song to playlist`});
-        return false;
+        return null;
     }
-    newSongPlaylistID = await SongSvc.addSongPlaylist(db, songID, playlistID);
+
+    const db = await DbSvc.connectToDB();
+    newSongPlaylistID = await SongSvc.addSongToPlaylist(db, songID, playlistID);
     db.end();
+
     if(newSongPlaylistID) {
-        res.status(200).send(newSongPlaylistID);
+        res.status(200).send({ id: newSongPlaylistID });
         return true;
     } else {
         res.status(404).send({ message: `Couldn't add song(id=${songID}) to playlist(id=${playlistID})`});
-        return false;
+        return null;
     }
 })
 
 // Intended to replace uploadSongs
 // Request must include a song object in req.body.song
 exports.addSongToDB = (async function (req ,res) {
-    const db = await DbSvc.connectToDB();
     const song = await JSON.parse(req.body.song);
     const parentSong = null;
-
+    
     // Return if required fields are null
     if (!song || !song.name || !song.path) {
         res.status(500).send({ message: "Data not formatted properly"});
-        return false;
+        return null;
     }
 
+    const db = await DbSvc.connectToDB();
+    db.beginTransaction(); // Allows us to commit or rollback the changes to the database
+    
     // Add song to database
-    db.beginTransaction();
     let newSongID = await SongSvc.addSong(db, song);
     if (!newSongID) {
         db.rollback();
         db.end();
         res.status(404).send({message: 'Failed to add song'});
-        return false;
+        return null;
     }
 
     // Add song to playlists in database
     const playlistIDs = song.playlistIDs;
     if (playlistIDs) {
         for (let i = 0; i < playlistIDs.length; ++i) {
-            newSongPlaylistID = await SongSvc.addSongPlaylist(
+            newSongPlaylistID = await SongSvc.addSongToPlaylist(
                 db,
                 newSongID,
                 playlistIDs[i]
@@ -144,29 +122,56 @@ exports.addSongToDB = (async function (req ,res) {
             db.rollback();
             db.end();
             res.status(404).send({message: 'Failed to add song to playlist'});
-            return false;
+            return null;
         }
     }
 
     // Update parent if the song has one
-    // TODO: if song.isParent, we need to make sure parent and other children are updated correctly
-    if (song.parentID) {
-        let updatedParentSong = await SongSvc.getSongByID(db, song.parentID);
-        updatedParentSong.isParent = 1;
+    if (song.parentID || song.isParent) {
+        let parentSong = await SongSvc.getSongByID(db, song.parentID);
 
-        const wasParentUpdated = await SongSvc.updateSongParent(db, updatedParentSong);
+        // If new song is replacing the parent
+        if (song.isParent) {
+            parentSong.isParent = 0;
+            parentSong.parentID = newSongID;
+        } else {
+            parentSong.isParent = 1;
+            parentSong.parentID = null;
+        }
+
+        const wasParentUpdated = await SongSvc.updateSongParent(db, parentSong);
 
         if(!wasParentUpdated) {
             db.rollback();
             db.end();
             res.status(404).send({message: 'Failed to update parent'});
-            return false;
+            return null;
         }
     }
-
 
     db.commit();
     db.end();
     res.status(200).send({newSongID})
     return true;
+})
+
+exports.deleteSong = (async function (req ,res) {
+    const id = req.params.id;
+
+    if (!id) {
+        res.status(404).send({ message: `ID required, structure request like so: /public/songs/<id>`});
+        return null;
+    }
+
+    const db = await DbSvc.connectToDB();
+    const songDeleted = await SongSvc.deleteSong(db, id);
+    db.end();
+
+    if(songDeleted) {
+        res.status(200).send({ message: `Song (${id}) was deleted` });
+        return true;
+    } else {
+        res.status(404).send({ message: `Couldn't delete song ${id}`});
+        return null;
+    }
 })
