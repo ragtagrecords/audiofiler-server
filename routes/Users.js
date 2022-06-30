@@ -1,5 +1,6 @@
 const DbSvc = require('../services/Db.js');
 const UserSvc = require('../services/Users.js');
+const AuthSvc = require('../services/Auth.js');
 
 exports.getUsers = (async function (req, res) {
     const db = await DbSvc.connectToDB();
