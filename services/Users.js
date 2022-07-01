@@ -1,70 +1,61 @@
 const mysql = require('mysql');
 const Logger = require('../utils/Logger.js');
+const { sqlInsert, sqlSelect } = require('../services/Db.js');
 
-function getAllUsers(db) {
-    return new Promise(async resolve => {
-        await db.query(
-            `SELECT * FROM users`,
-            [],
-            (err, users) => {
-                if (err) {
-                    Logger.logError('getAllUsers()', err.sqlMessage ?? "Database Error, No message found");
-                    resolve(false);
-                } else {
-                    Logger.logSuccess(
-                        'getAllUsers',
-                        'Returned all users from database' 
-                    );
-                    resolve(users);
-                }
-            }
-        );
+// Users
+const defaultColumns = [
+    'users.username',
+    'users.hashedPassword',
+    'users.salt'
+];
+const allColumns = [
+    ...defaultColumns,
+    'users.id',
+    'users.createTimestamp'
+];
 
-    });
+async function getAllUsers(db) {
+    if (!db) {
+        return false;
+    }
+
+    return sqlSelect(
+        db,
+        'users',
+        allColumns,
+        null,
+        null,
+        true
+    );
 }
 
-function getUserByUsername(db, username) {
-    return new Promise(async resolve => {
-        await db.query(
-            `SELECT * FROM users WHERE username = ?`,
-            [username],
-            (err, users) => {
-                if (err) {
-                    Logger.logError('getUserByUsername()', err.sqlMessage ?? "Database Error, No message found");
-                    resolve(false);
-                } else {
-                    Logger.logSuccess(
-                        'getUserByUsername',
-                        'Returned user from database' 
-                    );
-                    resolve(users[0]);
-                }
-            }
-        );
+async function getUserByUsername(db, username) {
+    if (!db || !username) {
+        console.log('ERROR: Username required');
+        return false;
+    }
 
-    });
+    return sqlSelect(
+        db,
+        'users',
+        allColumns,
+        'WHERE username = ?',
+        [username],
+        false
+    );
 }
-
 function addUser(db, username, hash, salt) {
-    return new Promise(async resolve => {
-        await db.query(
-            `INSERT INTO users (username, hashedPassword, salt) VALUES (?,?,?)`,
-            [
-                username,
-                hash,
-                salt
-            ],
-            (err, result) => {
-                if (err) {
-                    Logger.logError('addUser()', err.sqlMessage ?? "Database Error, No message found");
-                    resolve(err);
-                } else {
-                    Logger.logSuccess('addUser()', username + ' added to DB table (users)');
-                    resolve(result.insertId);
-                }
-            }
-        );
-    });
+    if(!db || !username || !hash || !salt) {
+        console.log('ERROR: Username, hash, and salt are required');
+        return false;
+    }
+  
+    return sqlInsert(
+        db,
+        'users',
+        defaultColumns
+        [username, hash, salt]
+    );
 }
 
 

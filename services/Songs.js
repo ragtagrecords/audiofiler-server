@@ -1,20 +1,40 @@
 const mysql = require('mysql');
 const Logger = require('../utils/Logger.js');
-const { sqlInsert, sqlSelect } = require('../services/Db.js');
+const { sqlInsert, sqlSelect, sqlUpdate, sqlDelete } = require('../services/Db.js');
 
-const allSongColumns = 'songs.id, songs.name, songs.path, songs.artist,'
-    + 'songs.tempo, songs.createTimestamp, songs.isParent, songs.parentID, songs.zipPath';
+// Column definitions for songs table
+const defColumns = [
+    'songs.path',
+    'songs.name',
+    'songs.tempo',
+    'songs.artist',
+    'songs.isParent',
+    'songs.parentID',
+    'songs.zipPath'
+];
 
+const allColumns = [
+    ...defColumns,
+    'songs.id', 
+    'songs.createTimestamp'
+];
+
+// TODO: bubble up errors based on the specific message
+// sqlFunctions should return an object with message and success status
+
+// Add a row to the songs table
 async function addSong(db, song) {
     const { path, name, tempo, artist, isParent, parentID, zipPath } = song;
 
     if (!path || !name) {
+        console.log('ERROR: Song must have path and name');
         return false;
     }
 
     return sqlInsert(
         db,
         'songs',
+        defColumns,
         [
             path,
             name,
@@ -27,154 +47,108 @@ async function addSong(db, song) {
     );
 }
 
-async function addSongToPlaylist(db, songID, playlistID, order = null) {
-
-    if(!db || !songID || !playlistID) {
-        return false;
-    }
-
-    return sqlInsert(
-        db,
-        'songPlaylists',
-        [
-            songID,
-            playlistID,
-            order
-        ]
-    );
-}
-
 async function getSongByID(db, id) {
     if (!db || !id) {
+        console.log('ERROR: ID required');
         return false;
     }
 
     return sqlSelect(
         db,
         'songs',
+        allColumns,
         'WHERE id = ?',
-        id,
+        [id],
         false
     );
 }
 
 async function getSongsByPlaylistID(db, id) {
     if (!db || !id) {
+        console.log('ERROR: Playlist ID required');
         return false;
     }
 
     return sqlSelect(
         db,
         'songs',
+        allColumns,
         'INNER JOIN songPlaylists ON songs.id = songPlaylists.songID WHERE songPlaylists.playlistID = ?',
-        id,
+        [id],
         true,
     );
 }
 
 async function getSongsByParentID(db, id) {
     if (!db || !id) {
+        console.log('ERROR: Parent ID required');
         return false;
     }
 
     return sqlSelect(
         db,
         'songs',
+        allColumns,
         'WHERE songs.parentID = ?',
-        id,
+        [id],
         true,
     );
 }
 
-// TODO: Abstract these functions into a single getAllRows(tableName) func
-function getAllSongs(db) {
-    return new Promise(async resolve => {
-        await db.query(
-            `SELECT ${allSongColumns}
-            FROM songs`,
-            [],
-            (err, songs) => {
-                if (err) {
-                    Logger.logError('getAllSongs()', err.sqlMessage ?? "Database Error, No message found");
-                    resolve(false);
-                } else {
-                    Logger.logSuccess(
-                        'getAllSongs',
-                        'Returned all songs from database' 
-                    );
-                    resolve(songs);
-                }
-            }
-        );
-
-    });
-}
-
-function deleteSong(db, id) {
-    if (!id) {
+async function getSongs(db) {
+    if (!db) {
         return false;
     }
 
-    return new Promise(async resolve => {
-        await db.query(
-            `DELETE FROM songs WHERE id=?`,
-            [id],
-            (err, result) => {
-                if (err) {
-                    Logger.logError('deleteSong()', err.sqlMessage ?? "Database Error, No message found");
-                    resolve(err);
-                } else {
-                    Logger.logSuccess(
-                        'deleteSong()',
-                        `Song ${id} deleted` 
-                    );
-                    resolve(true);
-                }
-            }
-        );
-    });
+    return sqlSelect(
+        db,
+        'songs',
+        allColumns,
+        null,
+        null,
+        true,
+    );
 }
 
+async function deleteSongByID(db, id) {
+    if (!db || !id) {
+        console.log('ERROR: ID required');
+        return false;
+    }
 
-
-
-
-
-
-
+    return sqlDelete(
+        db,
+        'songs',
+        'WHERE id = ?',
+        [id]
+    );
+}
 
 // eventually make this updateSong - all the columns
-function updateSongParent(db, parentSong) {
-    return new Promise(async resolve => {
-        const { isParent, parentID, id } = parentSong;
-        await db.query(
-            `UPDATE songs 
-            SET isParent = ?, parentID = ?
-            WHERE id = ?;`,
-            [isParent, parentID, id],
-            (err, res) => {
-                if (err) {
-                    Logger.logError('updateSongParent()', err.sqlMessage ?? "Database Error, No message found");
-                    resolve(false);
-                } else {
-                    Logger.logSuccess(
-                        'updateSongParent()',
-                        `Updated parent: ${parentSong.name}`
-                    );
-                    resolve(true);
-                }
-            }
-        );
-    });
+function updateSong(db, song, id) {
+
+    if (!db || !song || !id) {
+        console.log('ERROR: Song and ID required');
+        return false;
+    }
+
+    return sqlUpdate(
+        db,
+        'songs',
+        'WHERE id = ?',
+        song,
+        [id]
+    );
 }
+
+// Write a function to update a song
 
 module.exports = { 
     addSong, 
-    addSongToPlaylist, 
     getSongByID,
     getSongsByPlaylistID, 
     getSongsByParentID,
-    getAllSongs, 
-    updateSongParent,
-    deleteSong
+    getSongs, 
+    updateSong,
+    deleteSongByID
 };

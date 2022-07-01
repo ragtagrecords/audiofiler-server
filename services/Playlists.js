@@ -1,66 +1,87 @@
 const mysql = require('mysql');
 const Logger = require('../utils/Logger.js');
-const { sqlInsert } = require('../services/Db.js');
+const { sqlInsert, sqlSelect } = require('../services/Db.js');
 
-function getAllPlaylists(db) {
-  return new Promise(async resolve => {
-      await db.query(
-          `SELECT * FROM playlists`,
-          [],
-          (err, playlists) => {
-              if (err) {
-                  Logger.logError('getAllPlaylists()', err.sqlMessage ?? "Database Error, No message found");
-                  resolve(false);
-              } else {
-                  Logger.logSuccess(
-                      'getAllPlaylists()',
-                      'Returned all playlists from database' 
-                  );
-                  resolve(playlists);
-              }
-          }
-      );
+// Playlists
+const defPlaylistsColumns = ['playlists.name'];
+const allPlaylistsColumns = [...defPlaylistsColumns, 'playlists.id'];
 
-  });
+// SongPlaylists
+const defSongPlaylistsColumns = [
+    'songPlaylists.songID',
+    'songPlaylists.playlistID',
+    'songPlaylists.order'
+];
+const allSongPlaylistsColumns = [...defSongPlaylistsColumns, 'songPlaylists.id'];
+
+async function getPlaylists(db) {
+    if (!db) {
+        return false;
+    }
+
+    return sqlSelect(
+        db,
+        'playlists',
+        allPlaylistsColumns,
+        null,
+        null,
+        true,
+    );
 }
 
-function getPlaylistByID(db, id) {
-  return new Promise(async resolve => {
-      await db.query(
-          `SELECT * FROM playlists WHERE id = ?;`,
-          [id],
-          (err, playlists) => {
-              if (err) {
-                  Logger.logError('getPlaylistsByID()', err.sqlMessage ?? "Database Error, No message found");
-                  resolve(false);
-              } else {
-                  Logger.logSuccess(
-                      'getPlaylistByID()',
-                      `Returned playlist ${id} from database` 
-                  );
-                  resolve(playlists[0]);
-              }
-          }
-      );
+async function getPlaylistByID(db, id) {
+    if (!db || !id) {
+        console.log('ERROR: Playlist ID required');
+        return false;
+    }
 
-  });
+    return sqlSelect(
+        db,
+        'playlists',
+        allPlaylistsColumns,
+        'WHERE id = ?',
+        [id],
+        false
+    );
 }
 
 async function addPlaylist(db, name) {
 
-  if(!db || !name) {
-      return false;
-  }
+    if(!db || !name) {
+        console.log('ERROR: Playlist name required');
+        return false;
+    }
 
-  return sqlInsert(
-      db,
-      'playlists',
-      [name]
-  );
+    return sqlInsert(
+        db,
+        'playlists',
+        defPlaylistsColumns,
+        [name]
+    );
+}
+
+async function addSongToPlaylist(db, songID, playlistID, order = null) {
+
+    if(!db || !songID || !playlistID) {
+        console.log('ERROR: songID and playlistID required');
+        return false;
+    }
+
+    return sqlInsert(
+        db,
+        'songPlaylists',
+        defSongPlaylistsColumns,
+        [
+            songID,
+            playlistID,
+            order
+        ]
+    );
 }
 
 module.exports = { 
   getPlaylistByID, 
-  getAllPlaylists, 
+  getPlaylists, 
   addPlaylist,
+  addSongToPlaylist
 };

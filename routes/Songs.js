@@ -1,9 +1,10 @@
 const DbSvc = require('../services/Db.js');
 const SongSvc = require('../services/Songs.js');
+const PlaylistSvc = require('../services/Playlists.js');
 
 exports.getSongs = (async function (req, res) {
     const db = await DbSvc.connectToDB();
-    const songs = await SongSvc.getAllSongs(db);
+    const songs = await SongSvc.getSongs(db);
     db.end();
     if(songs) {
         res.status(200).send(songs);
@@ -59,28 +60,6 @@ exports.getSongsByParentID = (async function (req, res) {
     }
 })
 
-exports.addSongToPlaylist = (async function (req, res) {
-    const playlistID = req.params.playlistID;
-    const songID = req.params.songID;
-
-    if (!playlistID || !songID) {
-        res.status(404).send({ message: `Couldn't add song to playlist`});
-        return null;
-    }
-
-    const db = await DbSvc.connectToDB();
-    newSongPlaylistID = await SongSvc.addSongToPlaylist(db, songID, playlistID);
-    db.end();
-
-    if(newSongPlaylistID) {
-        res.status(200).send({ id: newSongPlaylistID });
-        return true;
-    } else {
-        res.status(404).send({ message: `Couldn't add song(id=${songID}) to playlist(id=${playlistID})`});
-        return null;
-    }
-})
-
 // Intended to replace uploadSongs
 // Request must include a song object in req.body.song
 exports.addSongToDB = (async function (req ,res) {
@@ -93,8 +72,6 @@ exports.addSongToDB = (async function (req ,res) {
         song = req.body.song
     }
 
-    const parentSong = null;
-    
     // Return if required fields are null
     if (!song || !song.name || !song.path) {
         res.status(500).send({ message: "Data not formatted properly"});
@@ -116,8 +93,8 @@ exports.addSongToDB = (async function (req ,res) {
     // Add song to playlists in database
     const playlistIDs = song.playlistIDs;
     if (playlistIDs) {
-        for (let i = 0; i < playlistIDs.length; ++i) {
-            newSongPlaylistID = await SongSvc.addSongToPlaylist(
+        for (let i = 0; i < playlistIDs.length; i += 1) {
+            newSongPlaylistID = await PlaylistSvc.addSongToPlaylist(
                 db,
                 newSongID,
                 playlistIDs[i]
@@ -147,7 +124,7 @@ exports.addSongToDB = (async function (req ,res) {
             parentSong.parentID = null;
         }
 
-        const wasParentUpdated = await SongSvc.updateSongParent(db, parentSong);
+        const wasParentUpdated = await SongSvc.updateSong(db, parentSong);
 
         if(!wasParentUpdated) {
             db.rollback();
@@ -163,7 +140,7 @@ exports.addSongToDB = (async function (req ,res) {
     return true;
 })
 
-exports.deleteSong = (async function (req ,res) {
+exports.deleteSongByID = (async function (req ,res) {
     const id = req.params.id;
 
     if (!id) {
@@ -172,7 +149,7 @@ exports.deleteSong = (async function (req ,res) {
     }
 
     const db = await DbSvc.connectToDB();
-    const songDeleted = await SongSvc.deleteSong(db, id);
+    const songDeleted = await SongSvc.deleteSongByID(db, id);
     db.end();
 
     if(songDeleted) {
@@ -182,4 +159,35 @@ exports.deleteSong = (async function (req ,res) {
         res.status(404).send({ message: `Couldn't delete song ${id}`});
         return null;
     }
+})
+
+exports.updateSong = (async function (req ,res) {
+    const id = req.params.id;
+    let song = null;
+
+    // Requests from React App need to be parsed from JSON
+    try {
+        song = await JSON.parse(req.body.song);
+    } catch(ex) { // Requests from Python do not
+        song = req.body.song
+    }
+
+    if (!song || !id) {
+        res.status(404).send({message: 'No song object found in request body'});
+        return false;
+    }
+
+
+    // Attempt to update song in database
+    const db = await DbSvc.connectToDB();
+    let resultMessage = await SongSvc.updateSong(db, song, id);
+    db.end();
+
+    if (!resultMessage) {
+        res.status(404).send({message: 'Failed to update song'});
+        return null;
+    }
+
+    res.status(200).send({ message: resultMessage});
+    return true;
 })
