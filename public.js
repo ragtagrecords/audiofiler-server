@@ -16,18 +16,19 @@ router.get('/', (req, res) => {
 });
 
 // Songs
+router.post('/songs', Songs.addSongToDB);
 router.get('/songs', Songs.getSongs);
 router.get('/songs/:id', Songs.getSongByID);
-router.post('/songs', Songs.addSongToDB);
-router.delete('/songs/:id', Songs.deleteSong);
 router.get('/songs/playlist/:playlistID', Songs.getSongsByPlaylistID);
 router.get('/songs/parent/:parentID', Songs.getSongsByParentID);
+router.put('/songs/:id', Songs.updateSong);
+router.delete('/songs/:id', Songs.deleteSongByID);
 
 // Playlists
 router.get('/playlists', Playlists.getPlaylists);
 router.post('/playlists', Playlists.addPlaylist);
 router.get('/playlists/:playlistID', Playlists.getPlaylist);
-router.post('/playlists/:playlistID/song/:songID', Songs.addSongToPlaylist);
+router.post('/playlists/:playlistID/song/:songID', Playlists.addSongToPlaylist);
 
 // Users
 router.get('/users', Users.getUsers);

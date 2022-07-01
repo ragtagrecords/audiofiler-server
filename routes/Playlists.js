@@ -1,7 +1,38 @@
 const DbSvc = require('../services/Db.js');
 const PlaylistSvc = require('../services/Playlists.js');
 
-// Add a new row to the playlists table
+// Get a a single row from the playlist table by ID
+exports.getPlaylist = (async function (req, res) {
+  const playlistID = req.params.playlistID;
+
+  const db = await DbSvc.connectToDB();    
+  const playlist = await PlaylistSvc.getPlaylistByID(db, req.params.playlistID);
+  db.end();
+
+  if (!playlist) {
+      res.status(404).send({'message': "Failed to get playlist" });
+      return null;
+  }
+
+  res.status(200).send(playlist);
+  return true;
+})
+
+// Get all the rows from the playlists table
+exports.getPlaylists = (async function (req, res) {
+  const db = await DbSvc.connectToDB();
+  const playlists = await PlaylistSvc.getPlaylists(db);
+  db.end();
+  if(playlists) {
+      res.status(200).send(playlists);
+      return true;
+  } else {
+      res.status(404).send({ message: "Couldn't get songs"});
+      return null;
+  }
+})
+
+// Add a row to the playlists table
 exports.addPlaylist = (async function (req, res) {
   const db = await DbSvc.connectToDB();    
   const newPlaylistID = await PlaylistSvc.addPlaylist(db, req.body.name);
@@ -16,31 +47,28 @@ exports.addPlaylist = (async function (req, res) {
   return true;
 })
 
-// Add a new row to the playlists table
-exports.getPlaylist = (async function (req, res) {
-  const db = await DbSvc.connectToDB();    
-  const playlist = await PlaylistSvc.getPlaylistByID(db, req.params.playlistID);
-  db.end();
 
-  if (!playlist) {
-      res.status(404).send({'message': "Failed to get playlist" });
+
+
+// Add a row to the songPlaylists table
+exports.addSongToPlaylist = (async function (req, res) {
+  const playlistID = req.params.playlistID;
+  const songID = req.params.songID;
+
+  if (!playlistID || !songID) {
+      res.status(404).send({ message: `Couldn't add song to playlist`});
       return null;
   }
 
-  res.status(200).send(playlist);
-  return true;
-})
-
-// Get JSON info for all playlists
-exports.getPlaylists = (async function (req, res) {
   const db = await DbSvc.connectToDB();
-  const playlists = await PlaylistSvc.getAllPlaylists(db);
+  newSongPlaylistID = await SongSvc.addSongToPlaylist(db, songID, playlistID);
   db.end();
-  if(playlists) {
-      res.status(200).send(playlists);
+
+  if(newSongPlaylistID) {
+      res.status(200).send({ id: newSongPlaylistID });
       return true;
   } else {
-      res.status(404).send({ message: "Couldn't get songs"});
+      res.status(404).send({ message: `Couldn't add song(id=${songID}) to playlist(id=${playlistID})`});
       return null;
   }
 })
