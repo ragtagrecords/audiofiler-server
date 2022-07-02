@@ -54,10 +54,10 @@ git fetch origin main
 git reset origin/main--hard
 
 // Stop the old server session
-forever stop app.js
+npm run stop:f
 
 // Start the new one
-forever start app.js
+npm run start:f
 ```
 
 ## Code Commentary
