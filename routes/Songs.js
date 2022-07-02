@@ -84,7 +84,15 @@ exports.addSongToPlaylist = (async function (req, res) {
 // Intended to replace uploadSongs
 // Request must include a song object in req.body.song
 exports.addSongToDB = (async function (req ,res) {
-    const song = await JSON.parse(req.body.song);
+    let song = null;
+
+    // Requests from React App must be parsed from JSON
+    try {
+        song = await JSON.parse(req.body.song);
+    } catch(ex) { // Requests from Python do not
+        song = req.body.song
+    }
+
     const parentSong = null;
     
     // Return if required fields are null
