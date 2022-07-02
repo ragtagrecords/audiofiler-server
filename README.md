@@ -109,6 +109,7 @@ const stuff = foo();
 // if failure
 if (!stuff) {
   console.log('error info');
+  res.status(404).send('error info');
   return null;
 }
 
