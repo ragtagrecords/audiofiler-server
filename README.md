@@ -1,10 +1,9 @@
-# audiofiler backend
-
+# audiofiler-server
 
 ## Production Endpoints
 Load these URL's in your browser to check if production API is working
 ```
-http://api.ragtagrecords.com
+http://api.ragtagrecords.com/public
 http://api.ragtagrecords.com/public/songs/
 http://api.ragtagrecords.com/public/songs/sample1.mp3
 http://api.ragtagrecords.com/public/playlists
@@ -17,10 +16,10 @@ All development and testing should be done on your machine. Type these commands 
 ### Run the server locally
 ```
 // download the code
-git clone git@github.com:ragtagrecords/audiofiler-fs.git 
+git clone git@github.com:ragtagrecords/audiofiler-server.git 
 
 // enter the new folder
-cd audiofiler-fs 
+cd audiofiler-server 
 
 // install dependencies
 npm install 
@@ -34,7 +33,6 @@ Check URL in your browser
 ```
 http://localhost:3000/public/songs
 ```
-
 
 ## Deploy changes to production
 On our server, we use `nginx` to route requests. When you go to audiofiler.ragtagrecords.com, we redirect the request to the local IP address on port 3000. To update production we simply need to update the server's code and restart the server.
