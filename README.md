@@ -47,17 +47,8 @@ ssh username@75.7.146.255
 // Navigate into the directory
 cd Apps/audiofiler-fs
 
-// Fetch the new code from Github
-git fetch origin main
-
-// Update to new code
-git reset origin/main--hard
-
-// Stop the old server session
-npm run stop:f
-
-// Start the new one
-npm run start:f
+// Fetch the new code from Github and restart the server
+npm run reboot
 ```
 
 ## Code Commentary
