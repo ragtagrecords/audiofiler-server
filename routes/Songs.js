@@ -75,7 +75,7 @@ exports.addSongToDB = (async function (req ,res) {
     // Return if required fields are null
     if (!song || !song.name || !song.path) {
         res.status(500).send({ message: "Data not formatted properly"});
-        return null;
+        return;
     }
 
     const db = await DbSvc.connectToDB();
@@ -87,7 +87,7 @@ exports.addSongToDB = (async function (req ,res) {
         db.rollback();
         db.end();
         res.status(404).send({message: 'Failed to add song'});
-        return null;
+        return;
     }
 
     // Add song to playlists in database
@@ -107,13 +107,22 @@ exports.addSongToDB = (async function (req ,res) {
             db.rollback();
             db.end();
             res.status(404).send({message: 'Failed to add song to playlist'});
-            return null;
+            return;
         }
     }
 
     // Update parent if the song has one
     if (song.parentID || song.isParent) {
         let parentSong = await SongSvc.getSongByID(db, song.parentID);
+
+        if (!parentSong) {
+            db.rollback();
+            db.end();
+            message = `ERROR: No parent song found with id:${song.parentID}`;
+            console.log(message);
+            res.status(404).send({message});
+            return;
+        }
 
         // If new song is replacing the parent
         if (song.isParent) {
@@ -123,21 +132,24 @@ exports.addSongToDB = (async function (req ,res) {
             parentSong.isParent = 1;
             parentSong.parentID = null;
         }
+        
+        // remove ID before update
+        delete parentSong.id;
 
-        const wasParentUpdated = await SongSvc.updateSong(db, parentSong);
+        const wasParentUpdated = await SongSvc.updateSong(db, parentSong, song.parentID);
 
         if(!wasParentUpdated) {
             db.rollback();
             db.end();
             res.status(404).send({message: 'Failed to update parent'});
-            return null;
+            return;
         }
     }
 
     db.commit();
     db.end();
     res.status(200).send({newSongID})
-    return true;
+    return;
 })
 
 exports.deleteSongByID = (async function (req ,res) {

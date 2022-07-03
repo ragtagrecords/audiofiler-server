@@ -128,7 +128,7 @@ async function deleteSongByID(db, id) {
 function updateSong(db, song, id) {
 
     if (!db || !song || !id) {
-        console.log('ERROR: Song and ID required');
+        console.log('ERROR: Song and ID required to update song');
         return false;
     }
 
