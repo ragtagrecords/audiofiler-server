@@ -14,17 +14,6 @@ jobs:
 
     - uses: actions/checkout@v3
 
-    - name: Set up secret file
-      env:
-        DEBUG_HOST: ${{ secrets.SERVER_SSH_HOST }}
-        DEBUG_SECRET_KEY: ${{ secrets.SERVER_SSH_KEY }}
-      run: |
-        echo $DEBUG_PASSWORD >> secrets.txt
-        echo $DEBUG_SECRET_KEY >> secrets.txt
-
-    - name: Run tmate
-      uses: mxschmitt/action-tmate@v2
-
     - name: Re-deploy on the server
       uses: appleboy/ssh-action@master
       with:
@@ -34,3 +23,4 @@ jobs:
         script: cd ~/Apps/audiofiler-server && npm run reboot
 
     - run: echo "🍏 This job's status is ${{ job.status }}."
+
