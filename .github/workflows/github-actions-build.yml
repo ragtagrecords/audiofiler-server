@@ -19,7 +19,7 @@ jobs:
       with:
         host: ${{ secrets.SERVER_SSH_HOST }}
         username: ${{ secrets.SERVER_SSH_USERNAME }}
-        key: ${{ secrets.SERVER_SSH_Kcd AppsEY }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
         script: cd ~/Apps/audiofiler-server && git fetch origin main && git reset origin/main --hard && rm -rf node_modules && npm install && forever start app.js
 
     - run: echo "🍏 This job's status is ${{ job.status }}."
