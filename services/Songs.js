@@ -125,12 +125,16 @@ async function deleteSongByID(db, id) {
 }
 
 // eventually make this updateSong - all the columns
-function updateSong(db, song, id) {
+async function updateSong(db, song, id) {
 
     if (!db || !song || !id) {
         console.log('ERROR: Song and ID required to update song');
         return false;
     }
+
+    // ID and createTimestamp should not be updated
+    if (song.id) { delete song.id }
+    if (song.createTimestamp) { delete song.createTimestamp }
 
     return sqlUpdate(
         db,

@@ -132,7 +132,7 @@ async function sqlDelete(db, table, whereClause, args) {
 
     return new Promise(async resolve => {
         await db.query(
-            `DELETE FROM ${table} ${whereClause} LIMIT 1;`,
+            `DELETE FROM ${table} ${whereClause} LIMIT 100;`,
             args,
             (err, result) => {
                 if (err) {
@@ -190,6 +190,8 @@ async function sqlUpdate(db, table, whereClause, object, id) {
     // Read object property names and values into arrays
     let colNames = Object.keys(object);
     let colValues = Object.values(object);
+    console.log(colNames);
+    console.log(colValues);
 
     return new Promise(async resolve => {
         await db.query(

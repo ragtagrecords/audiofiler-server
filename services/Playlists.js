@@ -1,6 +1,6 @@
 const mysql = require('mysql');
 const Logger = require('../utils/Logger.js');
-const { sqlInsert, sqlSelect } = require('../services/Db.js');
+const { sqlInsert, sqlSelect, sqlDelete } = require('../services/Db.js');
 
 // Playlists
 const defPlaylistsColumns = ['playlists.name'];
@@ -45,6 +45,22 @@ async function getPlaylistByID(db, id) {
     );
 }
 
+async function getPlaylistsBySongID(db, songID) {
+    if (!db || !songID) {
+        console.log('ERROR: Song ID required');
+        return false;
+    }
+
+    return sqlSelect(
+        db,
+        'playlists',
+        allPlaylistsColumns,
+        'INNER JOIN songPlaylists ON playlists.id = songPlaylists.playlistID WHERE songPlaylists.songID = ?',
+        [songID],
+        true
+    );
+}
+
 async function addPlaylist(db, name) {
 
     if(!db || !name) {
@@ -79,9 +95,25 @@ async function addSongToPlaylist(db, songID, playlistID, order = null) {
     );
 }
 
+async function deleteSongFromPlaylist(db, songID, playlistID) {
+    if (!db || !songID || !playlistID) {
+        console.log(`ERROR: ID's required for song and playlist`);
+        return false;
+    }
+
+    return sqlDelete(
+        db,
+        'songPlaylists',
+        'WHERE songID = ? AND playlistID = ?',
+        [songID, playlistID]
+    );
+}
+
 module.exports = { 
-  getPlaylistByID, 
-  getPlaylists, 
-  addPlaylist,
-  addSongToPlaylist
+    getPlaylists,
+    getPlaylistByID,
+    getPlaylistsBySongID, 
+    addPlaylist,
+    addSongToPlaylist,
+    deleteSongFromPlaylist
 };

@@ -2,6 +2,117 @@ const DbSvc = require('../services/Db.js');
 const SongSvc = require('../services/Songs.js');
 const PlaylistSvc = require('../services/Playlists.js');
 
+
+// When a a new song is added, playlists or parent/child info in the DB may need to change
+// This function makes sure other songs are updated accordingly when a new song is added
+async function updateSongVersions(db, newSongID, parentID, isParent) {
+    let parentSong = await SongSvc.getSongByID(db, parentID);
+
+    if (!parentSong) {
+        return {
+            success: 0,
+            message: `ERROR: No parent song found with id:${song.parentID}`,
+        };
+    }
+
+    if (parentSong.parentID) {
+        return {
+            success: 0,
+            message: `ERROR: Song id:${song.parentID} is a child, not a valid parentID`,
+        };
+    }
+
+    const songsToUpdate = [];
+
+    // Simple case here, new song is a child, make sure parent is set
+    if (!isParent) {
+        parentSong.isParent = 1;
+        parentSong.parentID = null;
+        songsToUpdate.push(parentSong);
+    } else { // If new song is replacing the parent
+
+        // Update new song info
+        const newSong = await SongSvc.getSongByID(db, newSongID);
+        if (!newSong) {
+            return {
+                success: 0,
+                message: `ERROR: Failed to get song info`,
+            };
+        }
+        newSong.parentID = null;
+        songsToUpdate.push(newSong);
+
+        // Update parent info
+        parentSong.isParent = 0;
+        parentSong.parentID = newSongID;
+        songsToUpdate.push(parentSong);
+
+        // Get all the playlists that this song is in
+        const playlists = await PlaylistSvc.getPlaylistsBySongID(db, parentSong.id);
+
+        // Because it is a new parent, we need to replace the existing parent song in each of its playlists
+        playlists.forEach(async({id}) => {
+
+            // Remove parent song from playlists
+            songRemoved = await PlaylistSvc.deleteSongFromPlaylist(db, parentID, id);
+
+            if (!songRemoved) {
+                return {
+                    success: 0,
+                    message: `ERROR: Could not remove parentID(${parentID}) from playlist(${id})`,
+                };
+            }
+
+            // Add new song to playlists
+            newSongAdded = await PlaylistSvc.addSongToPlaylist(db, newSongID, id);
+
+            if (!newSongAdded) {
+                return {
+                    success: 0,
+                    message: `ERROR: Could not add song(${newSongID}) to playlist(${id})`,
+                };
+            }
+            
+        })
+        
+
+        // Get existing children, we need to update them as well
+        const childrenSongs = await SongSvc.getSongsByParentID(db, parentID);
+        
+        if (!childrenSongs) {
+            return {
+                success: 0,
+                message: `ERROR: Could not fetch existing versions for parentID:${parentID}`,
+            };
+        }
+        
+        // Update existing children to new parentID
+        childrenSongs.forEach((child) => {
+            if(child.id != newSongID) {
+                child.parentID = newSongID;
+                songsToUpdate.push(child);
+            }
+        })
+    }
+
+    // Update all the songs with new info
+    songsToUpdate.forEach(async (song) => {
+        const wasSongUpdated = await SongSvc.updateSong(db, song, song.id);
+    
+        if(!wasSongUpdated) {
+            return {
+                success: 0,
+                message: `ERROR: Could not update songID:${song.id}, an existing child of parentID:${song.parentID}`,
+            };
+        }
+    })
+
+    return {
+        success: 1,
+        message: "SUCCESS: All related versions were updated",
+    };
+}
+
 exports.getSongs = (async function (req, res) {
     const db = await DbSvc.connectToDB();
     const songs = await SongSvc.getSongs(db);
@@ -60,9 +171,8 @@ exports.getSongsByParentID = (async function (req, res) {
     }
 })
 
-// Intended to replace uploadSongs
 // Request must include a song object in req.body.song
-exports.addSongToDB = (async function (req ,res) {
+exports.addSong = (async function (req ,res) {
     let song = null;
 
     // Requests from React App must be parsed from JSON
@@ -111,38 +221,15 @@ exports.addSongToDB = (async function (req ,res) {
         }
     }
 
-    // Update parent if the song has one
-    if (song.parentID || song.isParent) {
-        let parentSong = await SongSvc.getSongByID(db, song.parentID);
+    // If the song has a parentID, other songs may need to be updated
+    if (song.parentID) {
+        const { success, message } = await updateSongVersions(db, newSongID, song.parentID, song.isParent);
 
-        if (!parentSong) {
+        if (!success) {
             db.rollback();
             db.end();
-            message = `ERROR: No parent song found with id:${song.parentID}`;
             console.log(message);
             res.status(404).send({message});
-            return;
-        }
-
-        // If new song is replacing the parent
-        if (song.isParent) {
-            parentSong.isParent = 0;
-            parentSong.parentID = newSongID;
-        } else {
-            parentSong.isParent = 1;
-            parentSong.parentID = null;
-        }
-        
-        // remove ID before update
-        delete parentSong.id;
-
-        const wasParentUpdated = await SongSvc.updateSong(db, parentSong, song.parentID);
-
-        if(!wasParentUpdated) {
-            db.rollback();
-            db.end();
-            res.status(404).send({message: 'Failed to update parent'});
-            return;
         }
     }
 
@@ -189,17 +276,32 @@ exports.updateSong = (async function (req ,res) {
         return false;
     }
 
-
     // Attempt to update song in database
     const db = await DbSvc.connectToDB();
+    db.beginTransaction();
     let resultMessage = await SongSvc.updateSong(db, song, id);
-    db.end();
 
     if (!resultMessage) {
+        db.rollback();
+        db.end();
         res.status(404).send({message: 'Failed to update song'});
         return null;
     }
-
+    
+    // If the song has a parentID, other songs may need to be updated
+    if (song.parentID) {
+        const { success, message } = await updateSongVersions(db, id, song.parentID, song.isParent);
+        
+        if (!success) {
+            db.rollback();
+            db.end();
+            console.log(message);
+            res.status(404).send({message});
+        }
+    }
+    
+    db.commit();
+    db.end();
     res.status(200).send({ message: resultMessage});
     return true;
 })

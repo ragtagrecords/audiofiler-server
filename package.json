@@ -1,14 +1,13 @@
 {
-  "name": "audiofiler-fs",
+  "name": "audiofiler-server",
   "version": "1.0.0",
   "description": "serve staic audio files",
   "main": "index.js",
   "scripts": {
     "start": "node app.js",
-    "reboot": "git stash && git fetch origin main && git reset origin/main --hard && forever start app.js ",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "reboot": "git stash && git fetch origin main && git reset origin/main --hard && rm -rf node_modules && npm install && forever start app.js "
   },
-  "author": "ragtag records",
+  "author": "Ragtag Records",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
