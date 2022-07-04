@@ -1,0 +1,28 @@
+name: Deploy audiofiler-server
+
+on:
+  push:
+    branches: 
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo "Job triggered by ${{ github.event_name }} on ${{ github.repository }}."
+
+    - uses: actions/checkout@v3
+
+    - name: Re-deploy on the server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_SSH_HOST }}
+        username: ${{ secrets.SERVER_SSH_USERNAME }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        script: |
+          export NVM_DIR=~/.nvm
+          source ~/.nvm/nvm.sh
+          cd ~/Apps/audiofiler-server
+          npm run reboot
+
+    - run: echo "🍏 This job's status is ${{ job.status }}."
