@@ -1,4 +1,4 @@
-name: Build and deploy audiofiler-server
+name: Deploy audiofiler-server
 
 on:
   push:
@@ -7,22 +7,19 @@ on:
       - temptest
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18.2]
     steps:
       - run: echo "Job triggered by ${{ github.event_name }} on ${{ github.repository }}."
 
       - uses: actions/checkout@v3
 
-      - name: Extract build.tar
+      - name: Re-deploy on the server
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
+          host: ${{ secrets.SERVER_SSH_HOST }}
+          username: ${{ secrets.SERVER_SSH_USERNAME }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           script: cd ~/Apps/audiofiler-server && npm run reboot
 
       - run: echo "🍏 This job's status is ${{ job.status }}."
