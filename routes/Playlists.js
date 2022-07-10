@@ -128,7 +128,7 @@ exports.updatePlaylist = (async function (req, res) {
         res.status(200).send(newPlaylistName);
         return true;
     } else {
-        res.status(404).send({ message: `FAIL: Couldn't change playlist name(id=${songID}) to ${newName})`});
+        res.status(404).send({ message: `FAIL: Couldn't change playlist name(id=${id}) to ${newName})`});
         return false;   
     }
 })

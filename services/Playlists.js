@@ -115,29 +115,13 @@ async function updatePlaylistName(db, playlistID, newName) {
         return false;
     }
 
-    // return sqlUpdate(
-    //     db,
-    //     'playlists',
-
-    // )
-
-
-    return new Promise(async resolve => {
-        db.query(
-            "UPDATE playlists SET name = ? WHERE id = ?",
-            [newName, playlistID],
-            (err, result) => {
-                if (err)
-                {
-                    console.log(err);
-                    resolve(false);
-                } else {
-                    console.log(result);
-                    resolve(result);
-                }
-            }
-        );
-    })
+    return sqlUpdate(
+        db,
+        'playlists',
+        'WHERE id = ?',
+        {name: newName},
+        playlistID,
+    );
 }
 
 module.exports = { 
