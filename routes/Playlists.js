@@ -114,3 +114,21 @@ exports.deleteSongFromPlaylist = (async function (req ,res) {
       return;
   }
 })
+
+
+exports.updatePlaylist = (async function (req, res) {
+    const db = await DbSvc.connectToDB();
+    const id = req.params.id;
+    const newName = req.body.name;
+
+    newPlaylistName = await PlaylistSvc.updatePlaylistName(db, id, newName);
+    db.end();
+
+    if(newPlaylistName) {
+        res.status(200).send(newPlaylistName);
+        return true;
+    } else {
+        res.status(404).send({ message: `FAIL: Couldn't change playlist name(id=${songID}) to ${newName})`});
+        return false;   
+    }
+})

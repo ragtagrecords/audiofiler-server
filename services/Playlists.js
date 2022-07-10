@@ -1,6 +1,6 @@
 const mysql = require('mysql');
 const Logger = require('../utils/Logger.js');
-const { sqlInsert, sqlSelect, sqlDelete } = require('../services/Db.js');
+const { sqlInsert, sqlSelect, sqlDelete, sqlUpdate } = require('../services/Db.js');
 
 // Playlists
 const defPlaylistsColumns = ['playlists.name'];
@@ -109,11 +109,43 @@ async function deleteSongFromPlaylist(db, songID, playlistID) {
     );
 }
 
+async function updatePlaylistName(db, playlistID, newName) {
+    if (!db || !playlistID || !newName) {
+        console.log(`ERROR: Playlist ID and new playlist name are required`);
+        return false;
+    }
+
+    // return sqlUpdate(
+    //     db,
+    //     'playlists',
+
+    // )
+
+
+    return new Promise(async resolve => {
+        db.query(
+            "UPDATE playlists SET name = ? WHERE id = ?",
+            [newName, playlistID],
+            (err, result) => {
+                if (err)
+                {
+                    console.log(err);
+                    resolve(false);
+                } else {
+                    console.log(result);
+                    resolve(result);
+                }
+            }
+        );
+    })
+}
+
 module.exports = { 
     getPlaylists,
     getPlaylistByID,
     getPlaylistsBySongID, 
     addPlaylist,
     addSongToPlaylist,
-    deleteSongFromPlaylist
+    deleteSongFromPlaylist,
+    updatePlaylistName
 };

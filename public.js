@@ -31,6 +31,7 @@ router.get('/playlists/song/:songID', Playlists.getPlaylistsBySongID);
 router.post('/playlists', Playlists.addPlaylist);
 router.post('/playlists/:playlistID/song/:songID', Playlists.addSongToPlaylist);
 router.delete('/playlists/:playlistID/song/:songID', Playlists.deleteSongFromPlaylist);
+router.put('/playlists/:id', Playlists.updatePlaylist);
 
 // Users
 router.get('/users', Users.getUsers);
