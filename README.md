@@ -3,10 +3,10 @@
 ## Production Endpoints
 Load these URL's in your browser to check if production API is working
 ```
-http://api.ragtagrecords.com/public
-http://api.ragtagrecords.com/public/songs/
-http://api.ragtagrecords.com/public/songs/sample1.mp3
-http://api.ragtagrecords.com/public/playlists
+https://api.ragtagrecords.com/public
+https://api.ragtagrecords.com/public/songs/
+https://api.ragtagrecords.com/public/songs/sample1.mp3
+https://api.ragtagrecords.com/public/playlists
 ```
 
 ## Testing Locally
@@ -38,7 +38,7 @@ http://localhost:3000/public/songs
 On our server, we use `nginx` to route requests. When you go to audiofiler.ragtagrecords.com, we redirect the request to the local IP address on port 3000. To update production we simply need to update the server's code and restart the server.
 ```
 // Connect to server that hosts our backend
-ssh username@75.7.146.255
+ssh username@68.101.73.99
 
 // Enter your password
 
