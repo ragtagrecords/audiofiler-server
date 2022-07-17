@@ -2,7 +2,7 @@ var http = require('http');
 var express = require('express');
 var PORT = 3000;
 var app = express();
-var public = require('./public.js');
+var routes = require('./routes.js');
 const cors = require('cors');
 require('dotenv').config();
 
@@ -15,7 +15,7 @@ app.use(express.static("files"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use('/public', public);
+app.use('/', routes);
 
 app.listen(PORT, function(err){
     if (err) console.log(err);
